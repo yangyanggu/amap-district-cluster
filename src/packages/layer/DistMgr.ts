@@ -1,8 +1,9 @@
+import { polygon } from '@turf/helpers'
+import intersect from '@turf/intersect'
 import utils from './utils'
 import DistrictExplorer from './DistrictExplorer'
 import BoundsItem from './BoundsItem'
-import SphericalMercator from "./SphericalMercator";
-import {polygon, intersect} from "@turf/turf";
+import SphericalMercator from './SphericalMercator'
 
 const singleDistExplorer = new DistrictExplorer({})
 let isDistReady = false,
@@ -16,8 +17,8 @@ const nodeMap = {},
   function getBounds(node) {
     const nodeBounds = node.bbounds
     return new AMap.Bounds(
-        pixelToLngLat(nodeBounds.x, nodeBounds.y + nodeBounds.height, 20),
-        pixelToLngLat(nodeBounds.x + nodeBounds.width, nodeBounds.y, 20)
+      pixelToLngLat(nodeBounds.x, nodeBounds.y + nodeBounds.height, 20),
+      pixelToLngLat(nodeBounds.x + nodeBounds.width, nodeBounds.y, 20)
     )
   }
   function filteAreaTree(root) {
@@ -121,16 +122,16 @@ export default class DistMgr {
     return [node.bbounds.width / scale, node.bbounds.height / scale]
   }
 
-  static doesRingRingIntersect(mapBounds: AMap.Bounds, bounds: AMap.Bounds){
+  static doesRingRingIntersect(mapBounds: AMap.Bounds, bounds: AMap.Bounds) {
     const mapArray = [
-        mapBounds.getNorthWest().toArray(),
+      mapBounds.getNorthWest().toArray(),
       mapBounds.getNorthEast().toArray(),
       mapBounds.getSouthEast().toArray(),
       mapBounds.getSouthWest().toArray(),
       mapBounds.getNorthWest().toArray()
     ]
     const boxArray = [
-        bounds.getNorthWest().toArray(),
+      bounds.getNorthWest().toArray(),
       bounds.getNorthEast().toArray(),
       bounds.getSouthEast().toArray(),
       bounds.getSouthWest().toArray(),
@@ -154,12 +155,11 @@ export default class DistMgr {
       if (this.doesRingRingIntersect(bounds, topNode.bbox as AMap.Bounds)) {
         const children = topNode.children,
           hasChildren = children && children.length > 0
-        if (zoom > topNode.idealZoom && hasChildren){
-          for (let i = 0, len = children.length; i < len; i++){
+        if (zoom > topNode.idealZoom && hasChildren) {
+          for (let i = 0, len = children.length; i < len; i++) {
             DistMgr.traverseNode(children[i], bounds, zoom, handler, null, thisArg, excludedAdcodes)
           }
-        }
-        else handler.call(thisArg, topNode)
+        } else handler.call(thisArg, topNode)
       }
       finish && finish.call(thisArg)
     }

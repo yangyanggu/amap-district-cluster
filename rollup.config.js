@@ -42,7 +42,7 @@ export default {
       sourcemap: true
     }
   ],
-  treeShaking: true,
+  treeshake: true,
   // 监听的文件
   watch: {
     exclude: 'node_modules/**'

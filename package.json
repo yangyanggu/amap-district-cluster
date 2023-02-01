@@ -46,8 +46,8 @@
   "homepage": "https://github.com/AMap-Web/amap-three",
   "dependencies": {
     "@amap/amap-jsapi-types": "^0.0.10",
-    "@turf/turf": "^6.5.0",
-    "lodash-es": "4.17.21",
+    "@turf/helpers": "^6.5.0",
+    "@turf/intersect": "^6.5.0",
     "topojson-client": "3.1.0"
   },
   "devDependencies": {

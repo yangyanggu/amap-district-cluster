@@ -1,4 +1,3 @@
-import { debounce } from 'lodash-es'
 import Event from '../event'
 import Const from './Const'
 import distDataParser from './distDataParser'
@@ -33,7 +32,7 @@ export default class DistrictExplorer extends Event {
     this._opts.preload && this.loadMultiAreaNodes(this._opts.preload)
     this._debouncedHandleMousemove =
       this._opts.mousemoveDebounceWait > 1
-        ? debounce(this._handleMousemove, this._opts.mousemoveDebounceWait)
+        ? utils.debounce(this._handleMousemove, this._opts.mousemoveDebounceWait)
         : this._handleMousemove
     this._opts.map && this._opts.eventSupport && this._bindMapEvents(!0)
   }
