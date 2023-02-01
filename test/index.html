@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>测试</title>
+    <script src = 'https://webapi.amap.com/maps?v=2.0&key=747f980f217a31ba68d99301045a3fa7'></script>
+    <script src="/index.js" ></script>
+  </head>
+  <body>
+    <div id="app" style="height: 600px;"></div>
+    <script type="text/javascript">
+      const map = new AMap.Map('app', {
+        zoom: 7,
+        viewMode: '3D',
+        pitch: 35
+      })
+      window.map = map
+      const layer = new AMap.DistrictCluster({
+        map,
+        getPosition: function(item) {
+          if (!item) {
+            return null;
+          }
+          const parts = item.split(',');
+          //返回经纬度
+          return [parseFloat(parts[0]), parseFloat(parts[1])];
+        }
+      })
+      fetch('https://a.amap.com/amap-ui/static/data/10w.txt').then(res => {
+        return res.text()
+      }).then(csv => {
+        const data = csv.split('\n');
+        layer.setData(data);
+      })
+      // console.log('const map: ', map.coordsToLngLat([189025056, 86740399]))
+
+    </script>
+  </body>
+</html>

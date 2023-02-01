@@ -1,0 +1,318 @@
+import Event from '../event'
+import DistMgr from './DistMgr'
+import DistCounter from './DistCounter'
+import { BaseRender } from './BaseRender'
+import PointItem from './PointItem'
+import { KDBush } from './KDBush'
+import BoundsItem from './BoundsItem'
+
+export interface DistrictClusterOptions {
+  map: AMap.Map // 地图实例
+  zIndex?: number // 默认10
+  visible?: boolean //  是否显示
+  data: any[] // 数据源数组，每个元素即为点相关的信息
+  getPosition: (dataItem: any, dataIndex: number) => AMap.LngLatLike // 透明度，默认1
+  autoSetFitView?: boolean // 是否在绘制后自动调整地图视野以适合全部点，默认true
+  topAdcodes?: number[] // 顶层区划的adcode列表。默认为[100000]，即全国范围.假如仅需要展示河北和北京，可以设置为[130000, 110000]
+  excludedAdcodes?: number[] // 需要排除的区划的adcode列表
+  boundsQuerySupport?: boolean // 是否开启范围查询，默认false。开启后将增加一项辅助性的功能支持，即快速查询某个矩形范围内（比如当前地图窗口）的点。
+  renderPolygon?: (feature: any) => AMap.Polygon // 自定义绘制多边形
+  renderLabel?: (feature: any) => AMap.Marker // 自定义绘制标号
+  zooms?: [number, number]
+}
+
+class DistrictCluster extends Event {
+  _opts: DistrictClusterOptions //初始化参数
+  map: AMap.Map // 地图实例
+  _distMgr: DistMgr
+  _distCounter: DistCounter
+  renderEngine: BaseRender
+  _data = {
+    list: [],
+    bounds: null,
+    source: null
+  } as any
+
+  constructor(options: DistrictClusterOptions) {
+    super()
+    const defaultOptions = {
+      zooms: [3, 20],
+      autoSetFitView: true,
+      topAdcodes: [100000],
+      boundsQuerySupport: false,
+      visible: true,
+      excludedAdcodes: null,
+      zIndex: 10
+    }
+    this._opts = Object.assign({}, defaultOptions, options)
+    this.map = options.map
+    this._distMgr = new DistMgr({
+      topAdcodes: this._opts.topAdcodes,
+      excludedAdcodes: this._opts.excludedAdcodes
+    })
+    this._distCounter = new DistCounter({
+      pointPackerThisArg: this,
+      pointPacker: (p) => {
+        return this._packDataItem(p)
+      }
+    })
+    this.renderEngine = new BaseRender(this, {
+      map: options.map,
+      zIndex: options.zIndex,
+      visible: options.visible
+    })
+    this._opts.data && this.setData(this._opts.data)
+    this.map.on('moveend', () => {
+      this.renderLater()
+    })
+    this.map.on('zoomend', () => {
+      this.renderLater()
+    })
+    this.map.on('resize', () => {
+      this.renderLater()
+    })
+    this.map.on('rotateend', () => {
+      this.renderLater()
+    })
+    this.map.on('dragend', () => {
+      this.renderLater()
+    })
+  }
+
+  getMinZoomToShowSub(adcode) {
+    return this.renderEngine.getMinZoomToShowSub(adcode)
+  }
+  getAreaNodeProps(adcode) {
+    return DistMgr.getNodeByAdcode(adcode)
+  }
+  getClusterRecord(adcode, callback) {
+    DistMgr.onReady(() => {
+      const treeNode = DistMgr.getNodeByAdcode(adcode)
+      if (treeNode) {
+        adcode = treeNode.adcode
+        let toLoadAdcode = adcode,
+          asSub = !1
+        if (!DistMgr.getChildrenNumOfNode(treeNode)) {
+          toLoadAdcode = DistMgr.getParentAdcode(adcode, treeNode.acroutes)
+          asSub = !0
+        }
+        const distCounter = this._distCounter
+        distCounter.calcDistGroup(
+          toLoadAdcode,
+          !0,
+          () => {
+            if (callback) {
+              const treeNode = DistMgr.getNodeByAdcode(toLoadAdcode),
+                children = DistMgr.getNodeChildren(toLoadAdcode),
+                subList: any[] = []
+              for (let i = 0, len = children.length; i < len; i++) {
+                subList[i] = {
+                  adcode: children[i].adcode,
+                  name: children[i].name,
+                  dataItems: distCounter.getPackItemsByAdcode(children[i].adcode)
+                }
+                if (asSub && subList[i].adcode === adcode) {
+                  callback(null, subList[i])
+                  return
+                }
+              }
+              const result = {
+                adcode: toLoadAdcode,
+                name: treeNode.name,
+                dataItems: distCounter.getPackItemsByAdcode(toLoadAdcode),
+                hangingDataItems: distCounter.getPackItemsByAdcode(toLoadAdcode, 'hanging'),
+                children: subList
+              }
+              callback(null, result)
+            }
+          },
+          this
+        )
+      } else callback && callback(`AreaNode not exists: ${adcode}`)
+    }, this)
+  }
+  getDistrictExplorer() {
+    return DistMgr.getExplorer()
+  }
+  getRender() {
+    return this.renderEngine
+  }
+  getRenderOption(k) {
+    return this.renderEngine.getOption(k)
+  }
+  getRenderOptions() {
+    return this.renderEngine.getOptions()
+  }
+  zoomToShowSubFeatures(adcode, center?: any) {
+    this.renderEngine.zoomToShowSubFeatures(adcode, center)
+  }
+  renderLater(time?: number) {
+    this.renderEngine.renderLater(time)
+  }
+  render() {
+    this.renderEngine.render()
+  }
+  getDistMgr() {
+    return this._distMgr
+  }
+  _clearData() {
+    this.trigger('willClearData')
+    this._data
+      ? (this._data.list.length = 0)
+      : (this._data = {
+          list: [],
+          bounds: null
+        })
+    this._data.source = null
+    this._data.bounds = null
+    this._data.kdTree = null
+    this._distCounter.clearData()
+    this.trigger('didClearData')
+  }
+  _buildDataItems(data) {
+    const opts = this._opts,
+      posGetter = opts.getPosition,
+      list = this._data.list,
+      bounds = this._data.bounds
+    for (let idx = 0, len = data.length; idx < len; idx++) {
+      let point = data[idx],
+        lngLat = posGetter.call(this, point, idx) as any
+      if (lngLat) {
+        lngLat.getLng && (lngLat = [lngLat.getLng(), lngLat.getLat()])
+        list[idx] = new PointItem(lngLat[0], lngLat[1], idx)
+        bounds.expandByPoint(lngLat[0], lngLat[1])
+      }
+    }
+  }
+  getDataItemsByBounds(bounds) {
+    const kdTree = this._data.kdTree
+    if (!kdTree) return null
+    const min = bounds.getSouthWest(),
+      max = bounds.getNorthEast(),
+      list = this._data.list,
+      idxList = kdTree.range(min.getLng(), min.getLat(), max.getLng(), max.getLat()),
+      dataItems: any[] = []
+    for (let i = 0, len = idxList.length; i < len; i++) dataItems[i] = this._packDataItem(list[idxList[i]])
+    return dataItems
+  }
+  getDataItemsInView() {
+    const map = this.getMap()
+    return map ? this.getDataItemsByBounds(map.getBounds()) : null
+  }
+  _buildKDTree() {
+    if (!this._opts.boundsQuerySupport) return !1
+    const dataStore = this._data
+    if (dataStore.kdTree) {
+      dataStore.kdTree.destroy()
+      dataStore.kdTree = null
+    }
+    this.trigger('willBuildKDTree')
+    dataStore.kdTree = new KDBush(this._data.list)
+    this.trigger('didBuildKDTree', dataStore.kdTree)
+  }
+  _packDataItem(pointItem) {
+    if (!pointItem) return null
+    if (!pointItem._packedItem) {
+      const idx = pointItem.idx,
+        position = [pointItem.x, pointItem.y]
+      pointItem._packedItem = {
+        dataIndex: idx,
+        dataItem: this._data.source[idx],
+        position
+      }
+    }
+    return pointItem._packedItem
+  }
+  _buildData(data) {
+    this._clearData()
+    this.trigger('willBuildData', data)
+    this._data.source = data
+    this._data.bounds = BoundsItem.getBoundsItemToExpand()
+    this._buildDataItems(data)
+    this._buildKDTree()
+    this._distCounter.setData(this._data.list)
+    this.trigger('didBuildData', data)
+  }
+  setData(data) {
+    data || (data = [])
+    this._buildData(data)
+    this.renderLater(10)
+    data.length && this._opts.autoSetFitView && this.setFitView()
+  }
+  isReady() {
+    return DistMgr.isReady() && !!this._data
+  }
+  setFitView() {
+    const nodeBounds = this._data.bounds,
+      map = this.getMap(),
+      mapBounds = new AMap.Bounds(
+        [nodeBounds.x, nodeBounds.y],
+        [nodeBounds.x + nodeBounds.width, nodeBounds.y + nodeBounds.height]
+      )
+    map && map.setBounds(mapBounds)
+  }
+  getDistCounter() {
+    return this._distCounter
+  }
+  getMap(): any {
+    return this._opts.map
+  }
+  getMaxZoom() {
+    const zooms = this._opts.zooms as any
+    return zooms[1]
+  }
+  getMinZoom() {
+    const zooms = this._opts.zooms as any
+    return zooms[0]
+  }
+  getZooms() {
+    return this._opts.zooms
+  }
+  getOption(k) {
+    return this._opts[k]
+  }
+  getOptions() {
+    return this._opts
+  }
+  isHidden() {
+    return !this._opts.visible
+  }
+  show() {
+    return this.getRender().show()
+  }
+  hide() {
+    return this.getRender().hide()
+  }
+
+  destroy() {
+    this.getRender().destroy()
+    this.renderEngine = null as any
+    this._data = null
+    this._distMgr = null as any
+    this.map = undefined as any
+    this._opts = undefined as any
+  }
+
+  getzIndex(): number {
+    return this._opts.zIndex as number
+  }
+
+  setzIndex(zIndex: number) {
+    this._opts.zIndex = zIndex
+    this.getRender().setzIndex(zIndex)
+  }
+}
+
+export { DistrictCluster }
+
+;(function (c) {
+  const d = document,
+    a = 'appendChild',
+    i = 'styleSheet',
+    s = d.createElement('style')
+  s.type = 'text/css'
+  d.getElementsByTagName('head')[0][a](s)
+  s[i] ? (s[i].cssText = c) : s[a](d.createTextNode(c))
+})(
+  ".amap-ui-district-cluster-container{cursor:default;-webkit-backface-visibility:hidden;-webkit-transform:translateZ(0) scale(1,1)}.amap-ui-district-cluster-container canvas{position:absolute}.amap-ui-district-cluster-container .amap-ui-hide{display:none!important}.amap-ui-district-cluster-container .overlay-title,.amap-ui-district-cluster-marker{color:#555;background-color:#fffeef;font-size:12px;white-space:nowrap;position:absolute}.amap-ui-district-cluster-container .overlay-title{padding:2px 6px;display:inline-block;z-index:99999;border:1px solid #7e7e7e;border-radius:2px}.amap-ui-district-cluster-container .overlay-title:after,.amap-ui-district-cluster-container .overlay-title:before{content:'';display:block;position:absolute;margin:auto;width:0;height:0;border:solid transparent;border-width:5px}.amap-ui-district-cluster-container .overlay-title.left{transform:translate(10px,-50%)}.amap-ui-district-cluster-container .overlay-title.left:before{top:5px}.amap-ui-district-cluster-container .overlay-title.left:after{left:-9px;top:5px;border-right-color:#fffeef}.amap-ui-district-cluster-container .overlay-title.left:before{left:-10px;border-right-color:#7e7e7e}.amap-ui-district-cluster-container .overlay-title.top{transform:translate(-50%,-130%)}.amap-ui-district-cluster-container .overlay-title.top:before{left:0;right:0}.amap-ui-district-cluster-container .overlay-title.top:after{bottom:-9px;left:0;right:0;border-top-color:#fffeef}.amap-ui-district-cluster-container .overlay-title.top:before{bottom:-10px;border-top-color:#7e7e7e}.amap-ui-district-cluster-marker{border:1px solid #8e8e8e;width:auto;height:22px;border-radius:5px 5px 5px 0;left:0;top:0}.amap-ui-district-cluster-marker:after,.amap-ui-district-cluster-marker:before{content:'';display:block;position:absolute;width:0;height:0;border:solid rgba(0,0,0,0);border-width:6px;left:13px}.amap-ui-district-cluster-marker:after{bottom:-12px;border-top-color:#fffeef}.amap-ui-district-cluster-marker:before{bottom:-13px;border-top-color:#8e8e8e}.amap-ui-district-cluster-marker span{vertical-align:middle;padding:3px 5px;display:inline-block;height:16px;line-height:16px}.amap-ui-district-cluster-marker-title{border-radius:5px 0 0 0}.amap-ui-district-cluster-marker-body{background-color:#dc3912;color:#fff;border-radius:0 5px 5px 0}.amap-ui-district-cluster-marker.level_country .amap-ui-district-cluster-marker-body{background-color:#36c}.amap-ui-district-cluster-marker.level_province .amap-ui-district-cluster-marker-body{background-color:#dc3912}.amap-ui-district-cluster-marker.level_city .amap-ui-district-cluster-marker-body{background-color:#909}.amap-ui-district-cluster-marker.level_district .amap-ui-district-cluster-marker-body{background-color:#d47}"
+)
