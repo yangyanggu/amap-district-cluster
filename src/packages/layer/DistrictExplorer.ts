@@ -6,29 +6,19 @@ import AreaNode from './AreaNode'
 
 export default class DistrictExplorer extends Event {
   _opts: any
-  _hoverFeature: any
   _areaNodesForLocating: any
 
   _areaNodeCache: any
-  _renderedPolygons: any[]
-  _debouncedHandleMousemove: any
-  _activeMap = {} as any
   constructor(opts) {
     super()
     this._opts = Object.assign(
       {
         distDataLoc: '//webapi.amap.com/ui/1.1/ui/geo/DistrictExplorer/assets/d_v2',
-        eventSupport: !1,
-        keepFeaturePolygonReference: !0,
-        mouseEventNames: ['click'],
-        mousemoveDebounceWait: -1
       },
       opts
     )
-    this._hoverFeature = null
     this._areaNodesForLocating = null
     this._areaNodeCache = {}
-    this._renderedPolygons = []
     this._opts.preload && this.loadMultiAreaNodes(this._opts.preload)
   }
 
@@ -126,12 +116,6 @@ export default class DistrictExplorer extends Event {
   }
   destroy() {
     this._areaNodeCache = null
-    this._renderedPolygons = null as any
     this._opts = null
-  }
-  setActiveFeatures(features) {
-    const activeMap = {}
-    for (let i = 0, len = features.length; i < len; i++) activeMap[features[i].properties.adcode] = !0
-    this._activeMap = activeMap
   }
 }

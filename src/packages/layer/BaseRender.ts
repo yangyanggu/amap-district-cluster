@@ -4,6 +4,9 @@ import utils from './utils'
 import BoundsItem from './BoundsItem'
 import DistrictExplorer from './DistrictExplorer'
 import type { DistrictCluster } from './index'
+interface RenderOptions{
+  engine?: string
+}
 export class BaseRender extends Event {
   baseId = 1
   _ins: DistrictCluster
@@ -13,7 +16,6 @@ export class BaseRender extends Event {
   _currentViewBoundsInLngLat?: AMap.Bounds
   _currentPixelRatio?: number
 
-  _currentAreaNodes: any[] = []
   _currentFeatures: any[] = []
   _currentRenderId?: number
   _loadLeft = 0
@@ -23,7 +25,9 @@ export class BaseRender extends Event {
   _renderLaterId: any
   _map: AMap.Map
   _polygonCache: AMap.Polygon[] = []
+  _polygonPreRender: AMap.Polygon[] = []
   _markerCache: AMap.Marker[] = []
+  _markerPreRender: AMap.Marker[] = []
   layer: any
   markerGroup: AMap.OverlayGroup
   constructor(districtCluster: DistrictCluster, options) {
@@ -31,17 +35,7 @@ export class BaseRender extends Event {
     this._opts = utils.extend(
       {
         featureEventSupport: !0,
-        minHeightToShowSubFeatures: 630,
-        minSiblingAvgHeightToShowSubFeatures: 600,
-        minSubAvgHeightToShowSubFeatures: 300,
-        viewBoundsClipPadding: 10,
-        viewBoundsClipEnable: !0,
-        polygonTolerance: 1,
-        tryBackgroundDistrict: !0,
-        areaNodeCacheLimit: -1,
         featureStyle: {
-          lineJoin: 'round',
-          lineCap: 'round',
           fillStyle: 'rgba(102,170,0,0.5)',
           lineWidth: 2,
           strokeStyle: 'rgb(31, 119, 180)',
@@ -51,16 +45,32 @@ export class BaseRender extends Event {
         },
         featureStyleByLevel: {
           country: {
-            fillStyle: 'rgba(49, 163, 84, 0.8)'
+            strokeColor: 'rgb(31, 119, 180)',
+            strokeOpacity: 0.9,
+            strokeWeight: 2,
+            fillColor: 'rgb(49, 163, 84)',
+            fillOpacity: 0.8
           },
           province: {
-            fillStyle: 'rgba(116, 196, 118, 0.7)'
+            strokeColor: 'rgb(31, 119, 180)',
+            strokeOpacity: 0.9,
+            strokeWeight: 2,
+            fillColor: 'rgb(116, 196, 118)',
+            fillOpacity: 0.7
           },
           city: {
-            fillStyle: 'rgba(161, 217, 155, 0.6)'
+            strokeColor: 'rgb(31, 119, 180)',
+            strokeOpacity: 0.9,
+            strokeWeight: 2,
+            fillColor: 'rgb(161, 217, 155)',
+            fillOpacity: 0.6
           },
           district: {
-            fillStyle: 'rgba(199, 233, 192, 0.5)'
+            strokeColor: 'rgb(31, 119, 180)',
+            strokeOpacity: 0.9,
+            strokeWeight: 2,
+            fillColor: 'rgb(199, 233, 192)',
+            fillOpacity: 0.5
           }
         }
       },
@@ -77,7 +87,6 @@ export class BaseRender extends Event {
     this._ins = districtCluster
     this._isRendering = !1
     this._loadLeft = 0
-    this._currentAreaNodes = []
     this._currentFeatures = []
     if (this._opts.featureEventSupport) {
       this._distExplorer = new DistrictExplorer({
@@ -99,10 +108,6 @@ export class BaseRender extends Event {
         map.setZoomAndCenter(minZoomToShowSub, center)
       }
     }
-  }
-  _triggerOnSelfAndIns(name: string, ...args: any[]) {
-    this.trigger.call(this, name, args)
-    this._ins.trigger.call(this._ins, name, args)
   }
   getPixelRatio() {
     return Math.min(2, Math.round(window.devicePixelRatio || 1))
@@ -133,10 +138,11 @@ export class BaseRender extends Event {
     this.markerGroup.clearOverlays()
     this.layer.clear()
     this._polygonCache = []
+    this._polygonPreRender = []
     this._markerCache = []
+    this._markerPreRender = []
     this._currentRenderId = this.baseId++
     this._loadLeft = 0
-    this._currentAreaNodes.length = 0
     this._currentFeatures.length = 0
     this._renderViewDist(this._currentRenderId)
     this.trigger('didRenderViewport')
@@ -157,7 +163,7 @@ export class BaseRender extends Event {
         adcodes2Render.push(node.adcode)
       },
       () => {
-        console.log('adcodes2Render: ', adcodes2Render)
+        // console.log('adcodes2Render: ', adcodes2Render)
         this.isRenderIdStillValid(renderId) && this._prepareFeatures(renderId, adcodes2Render)
       },
       this
@@ -217,27 +223,22 @@ export class BaseRender extends Event {
     return !(!treeNode.children || !treeNode.children.length) && this.shouldShowSubOnZoom(treeNode, this._currentZoom)
   }
   _prepareFeatures(renderId, adcodes) {
-    let i, len, treeNode
     const justSelfList: any[] = [],
       showSubList: any[] = []
-    for (i = 0, len = adcodes.length; i < len; i++) {
-      treeNode = DistMgr.getNodeByAdcode(adcodes[i])
+    for (let i = 0, len = adcodes.length; i < len; i++) {
+      const treeNode = DistMgr.getNodeByAdcode(adcodes[i])
       if (!treeNode) throw new Error(`Can not find node: ${adcodes[i]}`)
       this._shouldShowSub(treeNode) ? showSubList.push(adcodes[i]) : justSelfList.push(adcodes[i])
     }
-    console.log('_prepareFeatures ------------- ', justSelfList, showSubList)
     this._prepareSelfFeatures(renderId, justSelfList)
     this._prepareSubFeatures(renderId, showSubList)
     this._checkLoadFinish(renderId)
   }
   _prepareSelfFeatures(renderId, adcodes) {
-    let i,
-      len,
-      treeNode,
-      toLoadAdcode,
-      currZoom = this._currentZoom as number
-    for (i = 0, len = adcodes.length; i < len; i++) {
-      treeNode = DistMgr.getNodeByAdcode(adcodes[i])
+    let toLoadAdcode
+    const currZoom = this._currentZoom as number
+    for (let i = 0, len = adcodes.length; i < len; i++) {
+      const treeNode = DistMgr.getNodeByAdcode(adcodes[i])
       toLoadAdcode = null
       if (treeNode.acroutes) {
         const parentNode = DistMgr.getNodeByAdcode(treeNode.acroutes[treeNode.acroutes.length - 1])
@@ -251,10 +252,11 @@ export class BaseRender extends Event {
   }
   _prepareSubFeatures(renderId, adcodes) {
     let i, len
-    for (i = 0, len = adcodes.length; i < len; i++) this._loadAndRenderSub(renderId, adcodes[i])
+    for (i = 0, len = adcodes.length; i < len; i++) {
+      this._loadAndRenderSub(renderId, adcodes[i])
+    }
   }
   _renderSelf(renderId, adcode, areaNode, options?: any) {
-    (options && options.isBackground) || this._currentAreaNodes.push(areaNode)
     let feature
     if (adcode === areaNode.getAdcode()) {
       feature = areaNode.getParentFeature()
@@ -275,21 +277,7 @@ export class BaseRender extends Event {
       adcode,
       !1,
       () => {
-        this.isRenderIdStillValid(renderId) && this._prepRenderFeatureInPixel(renderId, feature, options)
-      },
-      this
-    )
-  }
-  _renderSub(renderId, areaNode, options?: any) {
-    (options && options.isBackground) || this._currentAreaNodes.push(areaNode)
-    const subFeatures = areaNode.getSubFeatures()
-    this._ins.getDistCounter().calcDistGroup(
-      areaNode.getAdcode(),
-      !0,
-      () => {
-        if (this.isRenderIdStillValid(renderId))
-          for (let i = 0, len = subFeatures.length; i < len; i++)
-            this._prepRenderFeatureInPixel(renderId, subFeatures[i], options)
+        this.isRenderIdStillValid(renderId) && this._prepRenderFeatureInPixel(renderId, feature)
       },
       this
     )
@@ -298,23 +286,25 @@ export class BaseRender extends Event {
     if (0 === this._loadLeft) {
       const self = this
       setTimeout(function () {
-        self.isRenderIdStillValid(renderId) && self._handleRenderFinish(renderId)
+        self.isRenderIdStillValid(renderId) && self._handleRenderFinish()
       }, 0)
     }
   }
-  _handleRenderFinish(renderId) {
-    this._setAreaNodesForLocating()
-    this._triggerOnSelfAndIns('renderFinish', {
-      renderId,
-      features: this._currentFeatures
-    })
-    this._tryFreeMemery()
+  _renderSub(renderId, areaNode) {
+    const subFeatures = areaNode.getSubFeatures()
+    this._ins.getDistCounter().calcDistGroup(
+      areaNode.getAdcode(),
+      !0,
+      () => {
+        if (this.isRenderIdStillValid(renderId))
+          for (let i = 0, len = subFeatures.length; i < len; i++)
+            this._prepRenderFeatureInPixel(renderId, subFeatures[i])
+      },
+      this
+    )
   }
-  _setAreaNodesForLocating() {
-    if (this._distExplorer) {
-      this._distExplorer.setActiveFeatures(this._currentFeatures)
-      this._distExplorer.setAreaNodesForLocating(this._currentAreaNodes)
-    }
+  _handleRenderFinish() {
+    this._tryFreeMemery()
   }
   _tryFreeMemery() {
     this._ins.getDistMgr().tryClearCache(this._currentRenderId, this._opts.areaNodeCacheLimit)
@@ -353,8 +343,9 @@ export class BaseRender extends Event {
     this._ins.getDistMgr().touchAdcode(adcode, renderId)
     const distExplorer = DistMgr.getExplorer(),
       areaNode = distExplorer.getLocalAreaNode(adcode)
-    if (areaNode) this._renderSub(renderId, areaNode)
-    else {
+    if (areaNode) {
+      this._renderSub(renderId, areaNode)
+    } else {
       this._increaseLoadLeft()
       distExplorer.loadAreaNode(
         adcode,
@@ -362,9 +353,7 @@ export class BaseRender extends Event {
           if (this.isRenderIdStillValid(renderId)) {
             error
               ? console.error(error)
-              : this._renderSub(renderId, areaNode, {
-                  isAsync: !0
-                })
+              : this._renderSub(renderId, areaNode)
             this._decreaseLoadLeft(renderId)
           }
         },
@@ -390,63 +379,20 @@ export class BaseRender extends Event {
     }
     return ringBounds
   }
-  doesNeedFeaturePolyons() {
-    return !0
-  }
-  _prepRenderFeatureInPixel(renderId, feature, options) {
+  _prepRenderFeatureInPixel(renderId, feature) {
     if (!this._ins.getDistMgr().isExcludedAdcode(feature.properties.adcode)) {
-      options = utils.extend(
-        {
-          isBackground: false,
-          isAsync: false
-        },
-        options
-      )
       const dataItems = this._ins.getDistCounter().getPackItemsByAdcode(feature.properties.adcode)
       this._currentFeatures.push(feature)
       this.renderClusterMarker(renderId, feature, dataItems)
-      this.renderFeature(renderId, feature, null, dataItems, options)
+      this.renderFeature(renderId, feature, null, dataItems)
     }
   }
-  _buildPolygonsToRender(feature, forRender) {
-    const polygons = feature.geometry.coordinates,
-      padding = this._opts.viewBoundsClipPadding,
-      currBounds = this._currentViewBounds as any,
-      x = -padding,
-      y = -padding,
-      width = currBounds.width / (this._currentScaleFactor as number) + 2 * padding,
-      height = currBounds.height / (this._currentScaleFactor as number) + 2 * padding,
-      rectRing = [
-        [x, y],
-        [x + width, y],
-        [x + width, y + height],
-        [x, y + height],
-        [x, y]
-      ],
-      polygonsToRender: any[] = [],
-      clipEnable = forRender && this._opts.viewBoundsClipEnable
-    let totalPointsNum = 0
-    for (let i = 0, len = polygons.length; i < len; i++) {
-      polygonsToRender[i] = []
-      for (let j = 0, jlen = polygons[i].length; j < jlen; j++) {
-        let ring = polygons[i][j]
-        ring._bounds || (ring._bounds = this._buildRingBounds(ring))
-        if (BoundsItem.boundsIntersect(ring._bounds, this._currentViewBounds as BoundsItem)) {
-          ring = this._createRingForRender(ring)
-          polygonsToRender[i].push(ring)
-          totalPointsNum += ring.length
-        } else polygonsToRender[i].push([])
-      }
-    }
-    return totalPointsNum > 0 ? polygonsToRender : null
-  }
-  renderFeature(renderId, feature, polygons, dataItems, options) {
+  renderFeature(renderId, feature, polygons, dataItems) {
     const styleOptions = this._getFeatureStyleOptions(feature, dataItems)
     if (styleOptions) {
       const polygon = new (AMap as any).Polygon({
         path: feature.geometry.coordinates,
-        strokeWeight: 3,
-        fillColor: styleOptions.fillStyle
+        ...styleOptions
       })
       // console.log('renderFeature: ', feature, styleOptions, polygon)
       this._polygonCache.push(polygon)
@@ -512,28 +458,25 @@ export class BaseRender extends Event {
     }*/
   }
   _getClusterMarker(feature, dataItems) {
-    let container,
-      title,
-      body,
-      nodeClassNames = {
+     const nodeClassNames = {
         title: 'amap-ui-district-cluster-marker-title',
         body: 'amap-ui-district-cluster-marker-body',
         container: 'amap-ui-district-cluster-marker'
       }
-    container = document.createElement('div')
-    title = document.createElement('span')
+    const container = document.createElement('div')
+    const title = document.createElement('span')
     title.className = nodeClassNames.title
-    body = document.createElement('span')
+    const body = document.createElement('span')
     body.className = nodeClassNames.body
     container.appendChild(title)
     container.appendChild(body)
     const props = feature.properties,
       routeNames: any[] = [],
-      classNameList = [nodeClassNames.container, `level_${  props.level}`, `adcode_${  props.adcode}`]
+      classNameList = [nodeClassNames.container, `level_${props.level}`, `adcode_${props.adcode}`]
     if (props.acroutes)
       for (let acroutes = props.acroutes, i = 0, len = acroutes.length; i < len; i++) {
-        classNameList.push(`descendant_of_${  acroutes[i]}`)
-        i === len - 1 && classNameList.push(`child_of_${  acroutes[i]}`)
+        classNameList.push(`descendant_of_${acroutes[i]}`)
+        i === len - 1 && classNameList.push(`child_of_${acroutes[i]}`)
         i > 0 && routeNames.push(DistMgr.getNodeByAdcode(acroutes[i]).name)
       }
     container.className = classNameList.join(' ')
@@ -543,24 +486,25 @@ export class BaseRender extends Event {
     } else container.removeAttribute('title')
     title.innerHTML = utils.escapeHtml(props.name)
     body.innerHTML = dataItems.length
-    const resultMarker =
-      new AMap.Marker({
-        topWhenClick: !0,
-        offset: new AMap.Pixel(-20, -30),
-        content: container,
-        position: props.center
-      })
+    const resultMarker = new AMap.Marker({
+      topWhenClick: !0,
+      offset: new AMap.Pixel(-20, -30),
+      content: container,
+      position: props.center
+    })
     return resultMarker
   }
   _getFeatureStyleOptions(feature, dataItems) {
     const styleGetter = this._opts.getFeatureStyle
-    if (!styleGetter) return this._opts.featureStyle
+    const defaultStyle = this._opts.featureStyleByLevel[feature.properties.level]
+    if (!styleGetter){
+      return defaultStyle
+    }
     const styleOptions = styleGetter.call(null, feature, dataItems)
-    return styleOptions === !1
-      ? null
+    return !styleOptions
+      ? defaultStyle
       : utils.extend(
           {},
-          this._opts.featureStyle,
           this._opts.featureStyleByLevel[feature.properties.level],
           styleOptions
         )
@@ -588,13 +532,6 @@ export class BaseRender extends Event {
   }
   getOptions() {
     return this._opts
-  }
-  setOption(k, v) {
-    this._opts[k] = v
-  }
-  setOptions(opts) {
-    // eslint-disable-next-line no-prototype-builtins
-    for (const k in opts) opts.hasOwnProperty(k) && this.setOption(k, opts[k])
   }
   show() {
     this.layer.show()
