@@ -1,7 +1,6 @@
 import Event from '../event'
 import DistMgr from './DistMgr'
 import utils from './utils'
-import SphericalMercator from './SphericalMercator'
 import BoundsItem from './BoundsItem'
 import DistrictExplorer from './DistrictExplorer'
 import type { DistrictCluster } from './index'

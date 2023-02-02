@@ -137,17 +137,6 @@ export default class DistMgr {
       bounds.getSouthWest().toArray(),
       bounds.getNorthWest().toArray()
     ]
-    // console.log('mapArray: ', mapArray)
-    // console.log('boxArray: ', boxArray)
-    /*window.map.add(new (AMap as any).Polygon({
-      path: mapArray,
-      fillColor: 'green'
-    }))
-    window.map.add(new (AMap as any).Polygon({
-      path: boxArray,
-      fillColor: 'red'
-    }))*/
-    // return AMap.GeometryUtil.doesRingRingIntersect(boxArray, mapArray) || AMap.GeometryUtil.isRingInRing(boxArray, mapArray)
     return !!intersect(polygon([mapArray]), polygon([boxArray]))
   }
   static traverseNode(topNode, bounds: AMap.Bounds, zoom, handler, finish, thisArg, excludedAdcodes?: any) {

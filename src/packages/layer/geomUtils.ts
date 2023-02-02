@@ -91,8 +91,6 @@ function clipIntersection(cp1, cp2, s, e) {
 
 export default {
   sqClosestDistanceToPolygon,
-  sqClosestDistanceToSegment,
-  pointOnSegment,
   pointOnPolygon,
   pointInPolygon,
   polygonClip

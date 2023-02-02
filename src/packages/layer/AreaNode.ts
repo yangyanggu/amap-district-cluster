@@ -66,55 +66,6 @@ export default class AreaNode {
     groupMap = null as any
     return groupList
   }
-  getLocatedSubFeature(lngLat) {
-    const fIdx = this.getLocatedSubFeatureIndex(lngLat)
-    return this.getSubFeatureByIndex(fIdx)
-  }
-  getLocatedFeature(lngLat) {
-    let f = this.getLocatedSubFeature(lngLat)
-    f || this._data.geoData.sub || !this.underPositoin(lngLat) || (f = this._data.geoData.parent)
-    return f
-  }
-  underPositoin(lngLat) {
-    const p20 = SphericalMercator.lngLatToPoint([lngLat.lng, lngLat.lat], 20, !0),
-      geo = this._data.geoData.parent.geometry
-    if ('MultiPolygon' === geo.type) {
-      for (let i = 0, len = geo.coordinates.length; i < len; i += 1)
-        if (this.containsCoordinate(p20, geo.coordinates[i][0], 1)) return !0
-      return !1
-    }
-    if ('Polygon' === geo.type) return this.containsCoordinate(p20, geo.coordinates[0], 1)
-  }
-  containsCoordinate(coordinate, vertices, containBounds) {
-    let inside = !1
-    for (
-      let xi,
-        yi,
-        xj,
-        yj,
-        x = coordinate[0],
-        y = coordinate[1],
-        numVertices = vertices.length,
-        i = 0,
-        j = numVertices - 1;
-      i < numVertices;
-      j = i, i += 1
-    ) {
-      let intersect = !1
-      xi = vertices[i][0]
-      yi = vertices[i][1]
-      xj = vertices[j][0]
-      yj = vertices[j][1]
-      if ((xi === x && yi === y) || (xj === x && yj === y)) return !!containBounds
-      if (yi < y == yj >= y) {
-        const xx = ((xj - xi) * (y - yi)) / (yj - yi) + xi
-        if (x === xx) return !!containBounds
-        intersect = x < xx
-      }
-      intersect && (inside = !inside)
-    }
-    return inside
-  }
   getLocatedSubFeatureIndex(lngLat) {
     return this._getLocatedSubFeatureIndexByPixel(this.lngLatToPixel(lngLat))
   }
@@ -123,12 +74,6 @@ export default class AreaNode {
       const features = this.getSubFeatures()
       return features[fIdx]
     }
-    return null
-  }
-  getSubFeatureByAdcode(adcode) {
-    adcode = parseInt(adcode, 10)
-    for (let features = this.getSubFeatures(), i = 0, len = features.length; i < len; i++)
-      if (AreaNode.getAdcodeOfFeature(features[i]) === adcode) return features[i]
     return null
   }
   _getLocatedSubFeatureIndexByPixel(pixel) {
