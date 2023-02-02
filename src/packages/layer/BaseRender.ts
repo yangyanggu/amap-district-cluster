@@ -35,6 +35,9 @@ export class BaseRender extends Event {
     this._opts = utils.extend(
       {
         featureEventSupport: !0,
+        minHeightToShowSubFeatures: 630,
+        minSiblingAvgHeightToShowSubFeatures: 600,
+        minSubAvgHeightToShowSubFeatures: 300,
         featureStyle: {
           fillStyle: 'rgba(102,170,0,0.5)',
           lineWidth: 2,
