@@ -17,9 +17,6 @@ export interface DistrictClusterOptions {
   autoSetFitView?: boolean // 是否在绘制后自动调整地图视野以适合全部点，默认true
   topAdcodes?: number[] // 顶层区划的adcode列表。默认为[100000]，即全国范围.假如仅需要展示河北和北京，可以设置为[130000, 110000]
   excludedAdcodes?: number[] // 需要排除的区划的adcode列表
-  boundsQuerySupport?: boolean // 是否开启范围查询，默认false。开启后将增加一项辅助性的功能支持，即快速查询某个矩形范围内（比如当前地图窗口）的点。
-  renderPolygon?: (feature: any) => AMap.Polygon // 自定义绘制多边形
-  renderLabel?: (feature: any) => AMap.Marker // 自定义绘制标号
   renderOptions: RenderOptions
 }
 

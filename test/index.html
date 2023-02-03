@@ -28,7 +28,20 @@
           return [parseFloat(parts[0]), parseFloat(parts[1])];
         },
         renderOptions: {
-          zooms: [2,5]
+          zooms: [2,16],
+          renderClusterMarker(feature, dataItems){
+            return new AMap.Marker({
+              position: feature.properties.center,
+              anchor: 'center',
+              content: `<div style="word-break: keep-all;color: #fff;">${feature.properties.name} - ${dataItems.length}</div>`
+            })
+          },
+          renderPolygon(feature, dataItems){
+            return new AMap.Polygon({
+              path: feature.geometry.coordinates,
+              strokeColor: 'red',
+            })
+          }
         }
       })
       fetch('https://a.amap.com/amap-ui/static/data/10w.txt').then(res => {

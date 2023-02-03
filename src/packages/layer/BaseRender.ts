@@ -34,6 +34,8 @@ export interface RenderOptions {
   areaNodeCacheLimit?: number
   getFeatureStyle?: (feature: any, dataItems: any[]) => StyleOption
   zooms?: [number, number]
+  renderPolygon?: (feature: any, dataItems: any[]) => AMap.Polygon // 自定义绘制多边形
+  renderClusterMarker?: (feature: any, dataItems: any[]) => AMap.Marker // 自定义绘制标号
 }
 type _OptOptions = Required<RenderOptions>
 export class BaseRender extends Event {
@@ -204,7 +206,7 @@ export class BaseRender extends Event {
   }
   _renderViewDist(renderId) {
     const adcodes2Render: any[] = []
-    if(this._currentZoom < this._opts.zooms[0] || this._currentZoom > this._opts.zooms[1]){
+    if (this._currentZoom < this._opts.zooms[0] || this._currentZoom > this._opts.zooms[1]) {
       this.isRenderIdStillValid(renderId) && this._prepareFeatures(renderId, adcodes2Render)
       return
     }
@@ -393,7 +395,7 @@ export class BaseRender extends Event {
     const needRemoveMarker: AMap.Marker[] = []
     for (let i = 0; i < this._polygonCache.length; i++) {
       const prePolygon = this._polygonCache[i]
-      const adcode = prePolygon.getExtData().adcode
+      const adcode = prePolygon.getExtData()._data.adcode
       let isInCache = false
       for (let j = 0; j < this._currentFeatures.length; j++) {
         const item = this._currentFeatures[j]
@@ -447,9 +449,7 @@ export class BaseRender extends Event {
         loadAdcode,
         (error, areaNode) => {
           if (this.isRenderIdStillValid(renderId)) {
-            error
-              ? console.error(error)
-              : this._renderSelf(renderId, adcode, areaNode)
+            error ? console.error(error) : this._renderSelf(renderId, adcode, areaNode)
             this._decreaseLoadLeft(renderId)
           }
         },
@@ -489,76 +489,34 @@ export class BaseRender extends Event {
     }
   }
   _createPolygonFeature(feature, dataItems) {
-    const styleOptions = this._getFeatureStyleOptions(feature, dataItems) || {}
     const props = Object.assign({}, feature.properties)
     props.dataItems = dataItems
-    const polygon = new (AMap as any).Polygon({
+    if (this._opts.renderPolygon) {
+      const polygon = this._opts.renderPolygon(feature, dataItems)
+      const extData = polygon.getExtData() || {}
+      extData._data = props
+      polygon.setExtData(extData)
+      return polygon
+    }
+    const styleOptions = this._getFeatureStyleOptions(feature, dataItems) || {}
+    return new (AMap as any).Polygon({
       path: feature.geometry.coordinates,
       ...styleOptions,
-      extData: props
-    })
-    return polygon
-    // console.log('renderFeature: ', feature, styleOptions, polygon)
-    // console.log('this.layer: ', this.layer)
-  }
-  renderClusterMarker(renderId, feature, dataItems) {
-    const marker = this._createClusterMarker(feature, dataItems)
-    this._markerCache.push(marker)
-    this.markerGroup?.addOverlay(marker)
-    /*let props = feature.properties,
-      adcode = props.adcode,
-      clusterMarkerMgr = this._clusterMarkerMgr,
-      marker = clusterMarkerMgr.findByDataVal('adcode', adcode)
-    if (marker && this._opts.clusterMarkerKeepConsistent) clusterMarkerMgr.setTag(marker, renderId)
-    else {
-      if (!this._opts.getClusterMarkerPosition) return null
-      let fromPosition = null,
-        targetPosition = this._opts.getClusterMarkerPosition.call(this, feature, dataItems)
-      if (targetPosition && this._currentViewBoundsInLngLat.contains(targetPosition)) {
-        if (!this._opts.getClusterMarker) return null
-        marker = this._opts.getClusterMarker.call(
-          this,
-          feature,
-          dataItems,
-          marker || clusterMarkerMgr.pickFromRecycle()
-        )
-        if (marker) {
-          clusterMarkerMgr.setData(marker, 'adcode', adcode)
-          const clusterData = {
-            adcode,
-            feature,
-            dataItems
-          }
-          clusterMarkerMgr.setData(marker, 'clusterData', clusterData)
-          const map = this._ins.getMap()
-          marker.getMap() !== map && marker.setMap(map)
-          this._triggerOnSelfAndIns('clusterMarkerAdd', marker, clusterData)
-          if (this._opts.clusterMarkerEventSupport) {
-            marker.setClickable(!0)
-            marker.setCursor('pointer')
-            this._bindClusterMarkerEvents(marker, !0)
-          } else {
-            marker.setClickable(!1)
-            marker.setCursor('default')
-          }
-          clusterMarkerMgr.add(marker, renderId)
-          const parentAdcode = DistMgr.getParentAdcode(adcode, props.acroutes),
-            parentMarker = clusterMarkerMgr.findByDataVal('adcode', parentAdcode)
-          parentMarker && parentMarker.getMap() === map && (fromPosition = parentMarker.getPosition())
-          fromPosition
-            ? this._animChildComeOut(renderId, marker, fromPosition, targetPosition)
-            : marker.setPosition(targetPosition)
-          const children = DistMgr.getNodeChildren(adcode)
-          if (children)
-            for (let i = 0, len = children.length; i < len; i++) {
-              const childMarker = clusterMarkerMgr.findByDataVal('adcode', children[i].adcode)
-              childMarker && this._animChildGoBack(renderId, childMarker, targetPosition)
-            }
-        }
+      extData: {
+        _data: props
       }
-    }*/
+    })
   }
   _createClusterMarker(feature, dataItems) {
+    const props = feature.properties
+    props.dataItems = dataItems
+    if (this._opts.renderClusterMarker) {
+      const marker = this._opts.renderClusterMarker(feature, dataItems)
+      const extData = marker.getExtData() || {}
+      extData._data = props
+      marker.setExtData(extData)
+      return marker
+    }
     const nodeClassNames = {
       title: 'amap-ui-district-cluster-marker-title',
       body: 'amap-ui-district-cluster-marker-body',
@@ -571,8 +529,7 @@ export class BaseRender extends Event {
     body.className = nodeClassNames.body
     container.appendChild(title)
     container.appendChild(body)
-    const props = feature.properties,
-      routeNames: any[] = [],
+    const routeNames: any[] = [],
       classNameList = [nodeClassNames.container, `level_${props.level}`, `adcode_${props.adcode}`]
     if (props.acroutes)
       for (let acroutes = props.acroutes, i = 0, len = acroutes.length; i < len; i++) {
@@ -587,13 +544,16 @@ export class BaseRender extends Event {
     } else container.removeAttribute('title')
     title.innerHTML = utils.escapeHtml(props.name)
     body.innerHTML = dataItems.length
-    const resultMarker = new AMap.Marker({
+
+    return new AMap.Marker({
       topWhenClick: !0,
       offset: new AMap.Pixel(-20, -30),
       content: container,
-      position: props.center
+      position: props.center,
+      extData: {
+        _data: props
+      }
     })
-    return resultMarker
   }
   _getFeatureStyleOptions(feature, dataItems): StyleOption {
     const styleGetter = this._opts.getFeatureStyle
