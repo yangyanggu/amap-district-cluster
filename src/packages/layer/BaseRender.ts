@@ -4,48 +4,72 @@ import utils from './utils'
 import BoundsItem from './BoundsItem'
 import DistrictExplorer from './DistrictExplorer'
 import type { DistrictCluster } from './index'
-interface RenderOptions{
-  engine?: string
+declare global {
+  interface Window {
+    Loca: any
+  }
 }
+interface StyleOption {
+  strokeColor?: string
+  strokeOpacity?: number
+  strokeWeight?: number
+  fillColor?: string
+  fillOpacity?: number
+}
+interface FeatureStyleByLevelOption {
+  country?: StyleOption // 国家
+  province?: StyleOption // 省份
+  city?: StyleOption // 市
+  district?: StyleOption // 区县
+}
+export interface RenderOptions {
+  map: AMap.Map
+  // engine?: 'default' | 'loca'
+  minHeightToShowSubFeatures?: number
+  minSiblingAvgHeightToShowSubFeatures?: number
+  minSubAvgHeightToShowSubFeatures?: number
+  featureStyleByLevel?: FeatureStyleByLevelOption
+  zIndex?: number // 层级
+  visible?: boolean // 是否显示
+  areaNodeCacheLimit?: number
+  getFeatureStyle?: (feature: any, dataItems: any[]) => StyleOption
+  zooms?: [number, number]
+}
+type _OptOptions = Required<RenderOptions>
 export class BaseRender extends Event {
   baseId = 1
   _ins: DistrictCluster
-  _currentZoom?: number
+  _currentZoom = 2
   _currentScaleFactor?: number
   _currentViewBounds?: BoundsItem
   _currentViewBoundsInLngLat?: AMap.Bounds
   _currentPixelRatio?: number
 
-  _currentFeatures: any[] = []
+  _currentFeatures: { feature: any; dataItems: any }[] = []
   _currentRenderId?: number
   _loadLeft = 0
   _isRendering?: boolean
-  _opts: any
+  _opts: _OptOptions
   _distExplorer?: any
   _renderLaterId: any
   _map: AMap.Map
   _polygonCache: AMap.Polygon[] = []
-  _polygonPreRender: AMap.Polygon[] = []
   _markerCache: AMap.Marker[] = []
-  _markerPreRender: AMap.Marker[] = []
   layer: any
-  markerGroup: AMap.OverlayGroup
-  constructor(districtCluster: DistrictCluster, options) {
+  loca: any
+  _locaPolygonLayer: any
+  markerGroup?: AMap.OverlayGroup
+  constructor(districtCluster: DistrictCluster, options: RenderOptions) {
     super()
     this._opts = utils.extend(
       {
+        engine: 'default',
         featureEventSupport: !0,
+        areaNodeCacheLimit: -1,
         minHeightToShowSubFeatures: 630,
         minSiblingAvgHeightToShowSubFeatures: 600,
         minSubAvgHeightToShowSubFeatures: 300,
-        featureStyle: {
-          fillStyle: 'rgba(102,170,0,0.5)',
-          lineWidth: 2,
-          strokeStyle: 'rgb(31, 119, 180)',
-          hoverOptions: {
-            fillStyle: 'rgba(255,255,255,0.2)'
-          }
-        },
+        zooms: [2, 30],
         featureStyleByLevel: {
           country: {
             strokeColor: 'rgb(31, 119, 180)',
@@ -79,24 +103,47 @@ export class BaseRender extends Event {
       },
       options
     )
-    this.markerGroup = new AMap.OverlayGroup()
-    this.layer = new (AMap as any).VectorLayer({
-      zIndex: options.zIndex || 10,
-      visible: options.visible || true
-    })
     this._map = this._opts.map
-    this._map.addLayer(this.layer)
-    this._map.add(this.markerGroup as any)
+    this._createLayer()
     this._ins = districtCluster
     this._isRendering = !1
     this._loadLeft = 0
     this._currentFeatures = []
-    if (this._opts.featureEventSupport) {
-      this._distExplorer = new DistrictExplorer({
-        eventSupport: this._opts.featureEventSupport,
-        map: this._ins.getMap()
+    this._distExplorer = new DistrictExplorer({
+      map: this._ins.getMap()
+    })
+  }
+
+  _createLayer() {
+    this.markerGroup = new AMap.OverlayGroup()
+    this._map.add(this.markerGroup as any)
+    /*if(this._opts.engine === 'loca'){
+      this.loca = new window.Loca.Container({
+        map: this._map
+      });
+      this._locaPolygonLayer = new window.Loca.PolygonLayer({
+        zIndex: this._opts.zIndex,
+        visible: this._opts.visible
       })
-    }
+      this._locaPolygonLayer.setSource(new window.Loca.GeoJSONSource({
+        data: {
+          "type": "FeatureCollection",
+          "features": []
+        }
+      }))
+      this._locaPolygonLayer.setStyle({
+        topColor: (index, feature) => {
+          return this._getFeatureStyleOptions(feature, feature.properties.dataItems).fillColor
+        }
+      })
+      this.loca.add(this._locaPolygonLayer)
+    }else{*/
+    this.layer = new (AMap as any).VectorLayer({
+      zIndex: this._opts.zIndex || 10,
+      visible: this._opts.visible || true
+    })
+    this._map.addLayer(this.layer)
+    // }
   }
 
   zoomToShowSubFeatures(adcode, center?: any) {
@@ -138,15 +185,13 @@ export class BaseRender extends Event {
     this.refreshViewState()
     if (!this._currentViewBounds) return !1
     this.trigger('willRenderViewport')
-    this.markerGroup.clearOverlays()
-    this.layer.clear()
-    this._polygonCache = []
-    this._polygonPreRender = []
-    this._markerCache = []
-    this._markerPreRender = []
+    // this.markerGroup.clearOverlays()
+    // this.layer.clear()
+    // this._polygonCache = []
+    // this._markerCache = []
     this._currentRenderId = this.baseId++
     this._loadLeft = 0
-    this._currentFeatures.length = 0
+    this._currentFeatures = []
     this._renderViewDist(this._currentRenderId)
     this.trigger('didRenderViewport')
     this._isRendering = false
@@ -159,6 +204,10 @@ export class BaseRender extends Event {
   }
   _renderViewDist(renderId) {
     const adcodes2Render: any[] = []
+    if(this._currentZoom < this._opts.zooms[0] || this._currentZoom > this._opts.zooms[1]){
+      this.isRenderIdStillValid(renderId) && this._prepareFeatures(renderId, adcodes2Render)
+      return
+    }
     this._ins.getDistMgr().traverseTopNodes(
       this._currentViewBoundsInLngLat as AMap.Bounds,
       this._currentZoom,
@@ -259,7 +308,7 @@ export class BaseRender extends Event {
       this._loadAndRenderSub(renderId, adcodes[i])
     }
   }
-  _renderSelf(renderId, adcode, areaNode, options?: any) {
+  _renderSelf(renderId, adcode, areaNode) {
     let feature
     if (adcode === areaNode.getAdcode()) {
       feature = areaNode.getParentFeature()
@@ -308,6 +357,74 @@ export class BaseRender extends Event {
   }
   _handleRenderFinish() {
     this._tryFreeMemery()
+    this._renderAllFeature()
+  }
+  _renderAllFeature() {
+    // if (this._opts.engine === 'loca') {
+    //   this._renderAllFeatureByLoca()
+    // } else {
+    this._renderAllFeatureByDefault()
+    // }
+  }
+  /*_renderAllFeatureByLoca() {
+    const featureData = {
+      type: 'FeatureCollection',
+      features: []
+    } as any
+    this._currentFeatures.forEach((item) => {
+      const feature = item.feature
+      feature.properties.dataItems = item.dataItems
+      featureData.features.push(feature)
+    })
+    this._locaPolygonLayer.setSource(
+      new window.Loca.GeoJSONSource({
+        data: featureData
+      })
+    )
+  }*/
+  _renderAllFeatureByDefault() {
+    // 存储需要新增的面区划
+    const needRenderPolygons: AMap.Polygon[] = []
+    // 存储需要移除的面区划
+    const needRemovePolygon: AMap.Polygon[] = []
+    // 存储需要新增的聚合点
+    const needRenderMarker: AMap.Marker[] = []
+    // 存储需要移除的聚合点
+    const needRemoveMarker: AMap.Marker[] = []
+    for (let i = 0; i < this._polygonCache.length; i++) {
+      const prePolygon = this._polygonCache[i]
+      const adcode = prePolygon.getExtData().adcode
+      let isInCache = false
+      for (let j = 0; j < this._currentFeatures.length; j++) {
+        const item = this._currentFeatures[j]
+        const feature = item.feature
+        const props = feature.properties
+        if (adcode === props.adcode) {
+          isInCache = true
+          this._currentFeatures.splice(j, 1)
+          break
+        }
+      }
+      if (!isInCache) {
+        needRemovePolygon.push(prePolygon)
+        this._polygonCache.splice(i, 1)
+        needRemoveMarker.push(this._markerCache[i])
+        this._markerCache.splice(i, 1)
+        i--
+      }
+    }
+    this._currentFeatures.forEach((item) => {
+      needRenderPolygons.push(this._createPolygonFeature(item.feature, item.dataItems))
+      needRenderMarker.push(this._createClusterMarker(item.feature, item.dataItems))
+    })
+    this.layer.remove(needRemovePolygon)
+    this.markerGroup?.removeOverlays(needRemoveMarker)
+    this.layer.add(needRenderPolygons)
+    this._polygonCache.push(...needRenderPolygons)
+    needRenderPolygons.length = 0
+    this.markerGroup?.addOverlays(needRenderMarker)
+    this._markerCache.push(...needRenderMarker)
+    needRenderMarker.length = 0
   }
   _tryFreeMemery() {
     this._ins.getDistMgr().tryClearCache(this._currentRenderId, this._opts.areaNodeCacheLimit)
@@ -332,9 +449,7 @@ export class BaseRender extends Event {
           if (this.isRenderIdStillValid(renderId)) {
             error
               ? console.error(error)
-              : this._renderSelf(renderId, adcode, areaNode, {
-                  isAsync: !0
-                })
+              : this._renderSelf(renderId, adcode, areaNode)
             this._decreaseLoadLeft(renderId)
           }
         },
@@ -354,9 +469,7 @@ export class BaseRender extends Event {
         adcode,
         (error, areaNode) => {
           if (this.isRenderIdStillValid(renderId)) {
-            error
-              ? console.error(error)
-              : this._renderSub(renderId, areaNode)
+            error ? console.error(error) : this._renderSub(renderId, areaNode)
             this._decreaseLoadLeft(renderId)
           }
         },
@@ -364,49 +477,34 @@ export class BaseRender extends Event {
       )
     }
   }
-  _createRingForRender(ring) {
-    if (!ring.length) return ring
-    const newRing: any[] = [],
-      viewBounds = this._currentViewBounds as any,
-      scaleFactor = this._currentScaleFactor as number
-    for (let i = 0, len = ring.length; i < len; i++)
-      newRing[i] = [(ring[i][0] - viewBounds.x) / scaleFactor, (ring[i][1] - viewBounds.y) / scaleFactor]
-    newRing.length < 3 && (newRing.length = 0)
-    return newRing
-  }
-  _buildRingBounds(ring) {
-    const ringBounds = BoundsItem.getBoundsItemToExpand()
-    for (let i = 0, len = ring.length; i < len; i++) {
-      const p = ring[i]
-      ringBounds.expandByPoint(p[0], p[1])
-    }
-    return ringBounds
-  }
   _prepRenderFeatureInPixel(renderId, feature) {
     if (!this._ins.getDistMgr().isExcludedAdcode(feature.properties.adcode)) {
       const dataItems = this._ins.getDistCounter().getPackItemsByAdcode(feature.properties.adcode)
-      this._currentFeatures.push(feature)
-      this.renderClusterMarker(renderId, feature, dataItems)
-      this.renderFeature(renderId, feature, null, dataItems)
+      this._currentFeatures.push({
+        feature,
+        dataItems
+      })
+      // this.renderClusterMarker(renderId, feature, dataItems)
+      // this.renderFeature(renderId, feature, null, dataItems)
     }
   }
-  renderFeature(renderId, feature, polygons, dataItems) {
-    const styleOptions = this._getFeatureStyleOptions(feature, dataItems)
-    if (styleOptions) {
-      const polygon = new (AMap as any).Polygon({
-        path: feature.geometry.coordinates,
-        ...styleOptions
-      })
-      // console.log('renderFeature: ', feature, styleOptions, polygon)
-      this._polygonCache.push(polygon)
-      this.layer.add(polygon)
-      // console.log('this.layer: ', this.layer)
-    }
+  _createPolygonFeature(feature, dataItems) {
+    const styleOptions = this._getFeatureStyleOptions(feature, dataItems) || {}
+    const props = Object.assign({}, feature.properties)
+    props.dataItems = dataItems
+    const polygon = new (AMap as any).Polygon({
+      path: feature.geometry.coordinates,
+      ...styleOptions,
+      extData: props
+    })
+    return polygon
+    // console.log('renderFeature: ', feature, styleOptions, polygon)
+    // console.log('this.layer: ', this.layer)
   }
   renderClusterMarker(renderId, feature, dataItems) {
-    const marker = this._getClusterMarker(feature, dataItems)
+    const marker = this._createClusterMarker(feature, dataItems)
     this._markerCache.push(marker)
-    this.markerGroup.addOverlay(marker)
+    this.markerGroup?.addOverlay(marker)
     /*let props = feature.properties,
       adcode = props.adcode,
       clusterMarkerMgr = this._clusterMarkerMgr,
@@ -460,12 +558,12 @@ export class BaseRender extends Event {
       }
     }*/
   }
-  _getClusterMarker(feature, dataItems) {
-     const nodeClassNames = {
-        title: 'amap-ui-district-cluster-marker-title',
-        body: 'amap-ui-district-cluster-marker-body',
-        container: 'amap-ui-district-cluster-marker'
-      }
+  _createClusterMarker(feature, dataItems) {
+    const nodeClassNames = {
+      title: 'amap-ui-district-cluster-marker-title',
+      body: 'amap-ui-district-cluster-marker-body',
+      container: 'amap-ui-district-cluster-marker'
+    }
     const container = document.createElement('div')
     const title = document.createElement('span')
     title.className = nodeClassNames.title
@@ -497,20 +595,16 @@ export class BaseRender extends Event {
     })
     return resultMarker
   }
-  _getFeatureStyleOptions(feature, dataItems) {
+  _getFeatureStyleOptions(feature, dataItems): StyleOption {
     const styleGetter = this._opts.getFeatureStyle
     const defaultStyle = this._opts.featureStyleByLevel[feature.properties.level]
-    if (!styleGetter){
+    if (!styleGetter) {
       return defaultStyle
     }
     const styleOptions = styleGetter.call(null, feature, dataItems)
     return !styleOptions
       ? defaultStyle
-      : utils.extend(
-          {},
-          this._opts.featureStyleByLevel[feature.properties.level],
-          styleOptions
-        )
+      : utils.extend({}, this._opts.featureStyleByLevel[feature.properties.level], styleOptions)
   }
   renderLater(delay?: number) {
     if (!this._renderLaterId) {

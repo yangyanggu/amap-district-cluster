@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>测试</title>
     <script src = 'https://webapi.amap.com/maps?v=2.0&key=747f980f217a31ba68d99301045a3fa7'></script>
+    <script src="https://webapi.amap.com/loca?v=2.0.0&key=747f980f217a31ba68d99301045a3fa7"></script>
     <script src="/index.js" ></script>
   </head>
   <body>
@@ -25,6 +26,9 @@
           const parts = item.split(',');
           //返回经纬度
           return [parseFloat(parts[0]), parseFloat(parts[1])];
+        },
+        renderOptions: {
+          zooms: [2,5]
         }
       })
       fetch('https://a.amap.com/amap-ui/static/data/10w.txt').then(res => {

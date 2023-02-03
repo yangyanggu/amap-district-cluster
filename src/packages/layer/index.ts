@@ -5,6 +5,8 @@ import { BaseRender } from './BaseRender'
 import PointItem from './PointItem'
 import { KDBush } from './KDBush'
 import BoundsItem from './BoundsItem'
+import type {RenderOptions} from "./BaseRender";
+import utils from "./utils";
 
 export interface DistrictClusterOptions {
   map: AMap.Map // 地图实例
@@ -18,7 +20,7 @@ export interface DistrictClusterOptions {
   boundsQuerySupport?: boolean // 是否开启范围查询，默认false。开启后将增加一项辅助性的功能支持，即快速查询某个矩形范围内（比如当前地图窗口）的点。
   renderPolygon?: (feature: any) => AMap.Polygon // 自定义绘制多边形
   renderLabel?: (feature: any) => AMap.Marker // 自定义绘制标号
-  zooms?: [number, number]
+  renderOptions: RenderOptions
 }
 
 class DistrictCluster extends Event {
@@ -42,9 +44,10 @@ class DistrictCluster extends Event {
       boundsQuerySupport: false,
       visible: true,
       excludedAdcodes: null,
-      zIndex: 10
+      zIndex: 10,
+      renderOptions: {}
     }
-    this._opts = Object.assign({}, defaultOptions, options)
+    this._opts = utils.extend({}, defaultOptions, options)
     this.map = options.map
     this._distMgr = new DistMgr({
       topAdcodes: this._opts.topAdcodes,
@@ -57,9 +60,10 @@ class DistrictCluster extends Event {
       }
     })
     this.renderEngine = new BaseRender(this, {
-      map: options.map,
-      zIndex: options.zIndex,
-      visible: options.visible
+      ...options.renderOptions,
+      zIndex: this._opts.zIndex,
+      visible: this._opts.visible,
+      map: options.map
     })
     this._opts.data && this.setData(this._opts.data)
     this.map.on('moveend', () => {
