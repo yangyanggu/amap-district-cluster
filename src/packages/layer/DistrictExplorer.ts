@@ -115,6 +115,7 @@ export default class DistrictExplorer extends Event {
     return !0
   }
   destroy() {
+    this._areaNodesForLocating = null
     this._areaNodeCache = null
     this._opts = null
   }

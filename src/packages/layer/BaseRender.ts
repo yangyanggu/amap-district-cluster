@@ -52,7 +52,7 @@ export class BaseRender extends Event {
   _loadLeft = 0
   _isRendering?: boolean
   _opts: _OptOptions
-  _distExplorer?: any
+  _distExplorer: DistrictExplorer
   _renderLaterId: any
   _map: AMap.Map
   _polygonCache: AMap.Polygon[] = []
@@ -172,7 +172,7 @@ export class BaseRender extends Event {
       mapViewBounds = map.getBounds(),
       viewSize = map.getSize(),
       currZoom = map.getZoom(3),
-      maxZoom = simpIns.getMaxZoom(),
+      maxZoom = this._opts.zooms[1],
       scaleFactor = Math.pow(2, maxZoom - currZoom),
       northWest = mapViewBounds.getNorthWest(),
       topLeft = map.lngLatToCoords([northWest.getLng(), northWest.getLat()]),
@@ -592,25 +592,33 @@ export class BaseRender extends Event {
   }
   show() {
     this.layer.show()
+    this.markerGroup?.show()
   }
   hide() {
     this.layer.hide()
+    this.markerGroup?.hide()
   }
   clear() {
     this.layer.clear()
+    this.markerGroup?.clearOverlays()
     this._polygonCache = []
     this._markerCache = []
   }
   setzIndex(zIndex: number) {
     this.layer.setzIndex(zIndex)
   }
+  getZooms() {
+    return this._opts.zooms
+  }
   destroy() {
     this._map.removeLayer(this.layer)
+    this._map.remove(this.markerGroup as any)
+    this._currentFeatures = []
     this.clear()
     this.layer = null
     this._map = null as any
     this._ins = null as any
     this._distExplorer.destroy()
-    this._distExplorer = null
+    this._distExplorer = null as any
   }
 }

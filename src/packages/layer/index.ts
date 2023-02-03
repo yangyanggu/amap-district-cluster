@@ -3,10 +3,9 @@ import DistMgr from './DistMgr'
 import DistCounter from './DistCounter'
 import { BaseRender } from './BaseRender'
 import PointItem from './PointItem'
-import { KDBush } from './KDBush'
 import BoundsItem from './BoundsItem'
-import type {RenderOptions} from "./BaseRender";
-import utils from "./utils";
+import utils from './utils'
+import type { RenderOptions } from './BaseRender'
 
 export interface DistrictClusterOptions {
   map: AMap.Map // 地图实例
@@ -20,8 +19,10 @@ export interface DistrictClusterOptions {
   renderOptions: RenderOptions
 }
 
+type _OptOptions = Required<DistrictClusterOptions>
+
 class DistrictCluster extends Event {
-  _opts: DistrictClusterOptions //初始化参数
+  _opts: _OptOptions //初始化参数
   map: AMap.Map // 地图实例
   _distMgr: DistMgr
   _distCounter: DistCounter
@@ -38,7 +39,6 @@ class DistrictCluster extends Event {
       zooms: [3, 20],
       autoSetFitView: true,
       topAdcodes: [100000],
-      boundsQuerySupport: false,
       visible: true,
       excludedAdcodes: null,
       zIndex: 10,
@@ -86,63 +86,11 @@ class DistrictCluster extends Event {
   getAreaNodeProps(adcode) {
     return DistMgr.getNodeByAdcode(adcode)
   }
-  getClusterRecord(adcode, callback) {
-    DistMgr.onReady(() => {
-      const treeNode = DistMgr.getNodeByAdcode(adcode)
-      if (treeNode) {
-        adcode = treeNode.adcode
-        let toLoadAdcode = adcode,
-          asSub = !1
-        if (!DistMgr.getChildrenNumOfNode(treeNode)) {
-          toLoadAdcode = DistMgr.getParentAdcode(adcode, treeNode.acroutes)
-          asSub = !0
-        }
-        const distCounter = this._distCounter
-        distCounter.calcDistGroup(
-          toLoadAdcode,
-          !0,
-          () => {
-            if (callback) {
-              const treeNode = DistMgr.getNodeByAdcode(toLoadAdcode),
-                children = DistMgr.getNodeChildren(toLoadAdcode),
-                subList: any[] = []
-              for (let i = 0, len = children.length; i < len; i++) {
-                subList[i] = {
-                  adcode: children[i].adcode,
-                  name: children[i].name,
-                  dataItems: distCounter.getPackItemsByAdcode(children[i].adcode)
-                }
-                if (asSub && subList[i].adcode === adcode) {
-                  callback(null, subList[i])
-                  return
-                }
-              }
-              const result = {
-                adcode: toLoadAdcode,
-                name: treeNode.name,
-                dataItems: distCounter.getPackItemsByAdcode(toLoadAdcode),
-                hangingDataItems: distCounter.getPackItemsByAdcode(toLoadAdcode, 'hanging'),
-                children: subList
-              }
-              callback(null, result)
-            }
-          },
-          this
-        )
-      } else callback && callback(`AreaNode not exists: ${adcode}`)
-    }, this)
-  }
   getDistrictExplorer() {
     return DistMgr.getExplorer()
   }
   getRender() {
     return this.renderEngine
-  }
-  getRenderOption(k) {
-    return this.renderEngine.getOption(k)
-  }
-  getRenderOptions() {
-    return this.renderEngine.getOptions()
   }
   zoomToShowSubFeatures(adcode, center?: any) {
     this.renderEngine.zoomToShowSubFeatures(adcode, center)
@@ -196,21 +144,6 @@ class DistrictCluster extends Event {
     for (let i = 0, len = idxList.length; i < len; i++) dataItems[i] = this._packDataItem(list[idxList[i]])
     return dataItems
   }
-  getDataItemsInView() {
-    const map = this.getMap()
-    return map ? this.getDataItemsByBounds(map.getBounds()) : null
-  }
-  _buildKDTree() {
-    if (!this._opts.boundsQuerySupport) return !1
-    const dataStore = this._data
-    if (dataStore.kdTree) {
-      dataStore.kdTree.destroy()
-      dataStore.kdTree = null
-    }
-    this.trigger('willBuildKDTree')
-    dataStore.kdTree = new KDBush(this._data.list)
-    this.trigger('didBuildKDTree', dataStore.kdTree)
-  }
   _packDataItem(pointItem) {
     if (!pointItem) return null
     if (!pointItem._packedItem) {
@@ -230,7 +163,6 @@ class DistrictCluster extends Event {
     this._data.source = data
     this._data.bounds = BoundsItem.getBoundsItemToExpand()
     this._buildDataItems(data)
-    this._buildKDTree()
     this._distCounter.setData(this._data.list)
     this.trigger('didBuildData', data)
   }
@@ -258,30 +190,18 @@ class DistrictCluster extends Event {
   getMap(): any {
     return this._opts.map
   }
-  getMaxZoom() {
-    const zooms = this._opts.zooms as any
-    return zooms[1]
-  }
-  getMinZoom() {
-    const zooms = this._opts.zooms as any
-    return zooms[0]
-  }
   getZooms() {
-    return this._opts.zooms
-  }
-  getOption(k) {
-    return this._opts[k]
-  }
-  getOptions() {
-    return this._opts
+    return this.renderEngine.getZooms()
   }
   isHidden() {
     return !this._opts.visible
   }
   show() {
+    this._opts.visible = true
     return this.getRender().show()
   }
   hide() {
+    this._opts.visible = false
     return this.getRender().hide()
   }
 
@@ -305,7 +225,6 @@ class DistrictCluster extends Event {
 }
 
 export { DistrictCluster }
-
 ;(function (c) {
   const d = document,
     a = 'appendChild',
