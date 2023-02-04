@@ -2,8 +2,6 @@
 
 set -e
 
-pnpm run build
-
 cd ..
 
 npm publish --access public
