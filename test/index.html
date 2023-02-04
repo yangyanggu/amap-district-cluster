@@ -67,6 +67,15 @@
         layer.on('featureClick', (e, feature) => {
           console.log('featureClick: ', e, feature)
         })
+        layer.on('featureMouseover', (e, feature) => {
+          console.log('featureMouseover: ', e, feature)
+        })
+        layer.on('featureMouseout', (e, feature) => {
+          console.log('featureMouseout: ', e, feature)
+        })
+        layer.on('clusterMarkerClick', (e, feature) => {
+          console.log('clusterMarkerClick: ', e, feature)
+        })
         fetch('https://a.amap.com/amap-ui/static/data/10w.txt').then(res => {
           return res.text()
         }).then(csv => {

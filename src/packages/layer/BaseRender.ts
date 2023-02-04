@@ -427,13 +427,28 @@ export class BaseRender extends Event {
             }
           }, this)
         )
+        polygon.on(
+          'mouseover',
+          utils.bind((e) => {
+            this.emit('featureMouseover', e, item.feature)
+          }, this)
+        )
+        polygon.on(
+          'mouseout',
+          utils.bind((e) => {
+            this.emit('featureMouseout', e, item.feature)
+          }, this)
+        )
       }
       const marker = this._createClusterMarker(item.feature, item.dataItems)
       if (this._opts.clusterMarkerEventSupport) {
         marker.on(
           'click',
           utils.bind((e) => {
-            this.emit('clusterMarkerClick', e, item.feature)
+            this.emit('clusterMarkerClick', e, {
+              adcode: item.feature.properties.adcode,
+              ...item
+            })
             if (this._opts.clusterMarkerEventSupport) {
               this._ins.zoomToShowSubFeatures(item.feature.properties.adcode)
             }
