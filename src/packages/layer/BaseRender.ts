@@ -34,6 +34,10 @@ export interface RenderOptions {
   zooms?: [number, number]
   renderPolygon?: (feature: any, dataItems: any[]) => AMap.Polygon // 自定义绘制多边形
   renderClusterMarker?: (feature: any, dataItems: any[]) => AMap.Marker // 自定义绘制标号
+  clusterMarkerEventSupport?: boolean // 聚合标注是否开启事件支持，默认true。
+  clusterMarkerClickToShowSub?: boolean // 点击聚合标注是否触发展示子级区划（即调用 zoomToShowSubFeatures 方法），默认true
+  featureEventSupport?: boolean // 区划面是否开启事件支持，默认true
+  featureClickToShowSub?: boolean // 点击区划面是否触发进入子级区划，默认false
 }
 type _OptOptions = Required<RenderOptions>
 export class BaseRender extends Event {
@@ -63,12 +67,15 @@ export class BaseRender extends Event {
     this._opts = utils.extend(
       {
         engine: 'default',
-        featureEventSupport: !0,
         areaNodeCacheLimit: -1,
         minHeightToShowSubFeatures: 630,
         minSiblingAvgHeightToShowSubFeatures: 600,
         minSubAvgHeightToShowSubFeatures: 300,
         zooms: [2, 30],
+        clusterMarkerEventSupport: true, // 聚合标注是否开启事件支持，默认true。
+        clusterMarkerClickToShowSub: true, // 点击聚合标注是否触发展示子级区划（即调用 zoomToShowSubFeatures 方法），默认true
+        featureEventSupport: true, // 区划面是否开启事件支持，默认true
+        featureClickToShowSub: false,
         featureStyleByLevel: {
           country: {
             strokeColor: 'rgb(31, 119, 180)',
@@ -180,7 +187,6 @@ export class BaseRender extends Event {
   renderViewport() {
     this.refreshViewState()
     if (!this._currentViewBounds) return !1
-    this.trigger('willRenderViewport')
     // this.markerGroup.clearOverlays()
     // this.layer.clear()
     // this._polygonCache = []
@@ -189,7 +195,6 @@ export class BaseRender extends Event {
     this._loadLeft = 0
     this._currentFeatures = []
     this._renderViewDist(this._currentRenderId)
-    this.trigger('didRenderViewport')
     this._isRendering = false
   }
   getCurrentRenderId() {
@@ -379,6 +384,7 @@ export class BaseRender extends Event {
     )
   }*/
   _renderAllFeatureByDefault() {
+    // console.log('this._currentFeatures: ', this._currentFeatures)
     // 存储需要新增的面区划
     const needRenderPolygons: AMap.Polygon[] = []
     // 存储需要移除的面区划
@@ -410,8 +416,32 @@ export class BaseRender extends Event {
       }
     }
     this._currentFeatures.forEach((item) => {
-      needRenderPolygons.push(this._createPolygonFeature(item.feature, item.dataItems))
-      needRenderMarker.push(this._createClusterMarker(item.feature, item.dataItems))
+      const polygon = this._createPolygonFeature(item.feature, item.dataItems)
+      if (this._opts.featureEventSupport) {
+        polygon.on(
+          'click',
+          utils.bind((e) => {
+            this.emit('featureClick', e, item.feature)
+            if (this._opts.featureClickToShowSub) {
+              this._ins.zoomToShowSubFeatures(item.feature.properties.adcode)
+            }
+          }, this)
+        )
+      }
+      const marker = this._createClusterMarker(item.feature, item.dataItems)
+      if (this._opts.clusterMarkerEventSupport) {
+        marker.on(
+          'click',
+          utils.bind((e) => {
+            this.emit('clusterMarkerClick', e, item.feature)
+            if (this._opts.clusterMarkerEventSupport) {
+              this._ins.zoomToShowSubFeatures(item.feature.properties.adcode)
+            }
+          }, this)
+        )
+      }
+      needRenderPolygons.push(polygon)
+      needRenderMarker.push(marker)
     })
     this.layer.remove(needRemovePolygon)
     this.markerGroup?.removeOverlays(needRemoveMarker)

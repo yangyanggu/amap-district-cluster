@@ -33,9 +33,12 @@ class DistrictCluster extends Event {
     source: null
   } as any
 
-  _mouseEvent = utils.bind(() => {
-    this.renderLater()
-  }, this)
+  _mouseEvent = utils.bind(
+    utils.debounce(() => {
+      this.renderLater()
+    }, 50),
+    this
+  )
 
   constructor(options: DistrictClusterOptions) {
     super()
@@ -66,6 +69,9 @@ class DistrictCluster extends Event {
       zIndex: this._opts.zIndex,
       visible: this._opts.visible,
       map: options.map
+    })
+    this.renderEngine.on('*', (name, ...data: any[]) => {
+      this.emit(name as any, ...data)
     })
     this._opts.data && this.setData(this._opts.data)
     this.bindOrUnbindMapEvent()

@@ -5,6 +5,11 @@ import DistrictExplorer from './DistrictExplorer'
 import BoundsItem from './BoundsItem'
 import SphericalMercator from './SphericalMercator'
 
+interface DeepCount {
+  total: number
+  count: number
+}
+
 export default class DistMgr {
   _opts: any
   _touchMap: any
@@ -33,6 +38,7 @@ export default class DistMgr {
         }
         this.waitFnList.length = 0
       }
+      // console.log('this._opts.topAdcodes: ', this._opts.topAdcodes)
       this.singleDistExplorer.loadMultiAreaNodes(this._opts.topAdcodes)
     })
   }
@@ -115,7 +121,7 @@ export default class DistMgr {
     return this.singleDistExplorer
   }
   traverseCountry(bounds, zoom, handler, finish, thisArg) {
-    this.traverseNode(this.singleCountryNode, bounds, zoom, handler, finish, thisArg)
+    this.traverseNode(this.singleCountryNode, bounds, zoom, handler, finish, thisArg, [])
   }
   getNodeBoundsSize(node, zoom) {
     const pz = this.getPixelZoom(),
@@ -140,7 +146,7 @@ export default class DistMgr {
     ]
     return !!intersect(polygon([mapArray]), polygon([boxArray]))
   }
-  traverseNode(topNode, bounds: AMap.Bounds, zoom, handler, finish, thisArg, excludedAdcodes?: any) {
+  traverseNode(topNode, bounds: AMap.Bounds, zoom, handler, finish, thisArg, excludedAdcodes, deepCount?: DeepCount) {
     if (!(excludedAdcodes && excludedAdcodes.indexOf(topNode.adcode) >= 0)) {
       if (this.doesRingRingIntersect(bounds, topNode.bbox as AMap.Bounds)) {
         const children = topNode.children,
@@ -151,7 +157,16 @@ export default class DistMgr {
           }
         } else handler.call(thisArg, topNode)
       }
-      finish && finish.call(thisArg)
+      if (finish) {
+        if (deepCount) {
+          deepCount.count++
+          if (deepCount.count >= deepCount.total) {
+            finish.call(thisArg)
+          }
+        } else {
+          finish.call(thisArg)
+        }
+      }
     }
   }
   onReady(fn, thisArg, canSync?: any) {
@@ -176,11 +191,15 @@ export default class DistMgr {
   }
   traverseTopNodes(bounds: AMap.Bounds, zoom, handler, finish, thisArg) {
     const topAdcodes = this._opts.topAdcodes,
-      excludedAdcodes = this._opts.excludedAdcodes
+      excludedAdcodes = this._opts.excludedAdcodes,
+      deepCount: DeepCount = {
+        total: topAdcodes.length,
+        count: 0
+      }
     for (let i = 0, len = topAdcodes.length; i < len; i++) {
       const node = this.getNodeByAdcode(topAdcodes[i])
       if (!node) throw new Error(`Can not find adcode: ${topAdcodes[i]}`)
-      this.traverseNode(node, bounds, zoom, handler, finish, thisArg, excludedAdcodes)
+      this.traverseNode(node, bounds, zoom, handler, finish, thisArg, excludedAdcodes, deepCount)
     }
   }
   tryClearCache(tag, maxLeft) {
