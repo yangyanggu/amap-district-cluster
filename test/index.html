@@ -38,6 +38,7 @@
       function createLayer(){
         layer = new AMap.DistrictCluster({
           map,
+          autoSetFitView: false,
           // topAdcodes: [130000, 110000],
           getPosition: function(item) {
             if (!item) {

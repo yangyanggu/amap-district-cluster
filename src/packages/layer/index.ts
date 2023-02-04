@@ -43,7 +43,6 @@ class DistrictCluster extends Event {
   constructor(options: DistrictClusterOptions) {
     super()
     const defaultOptions = {
-      zooms: [3, 20],
       autoSetFitView: true,
       topAdcodes: [100000],
       visible: true,
