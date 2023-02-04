@@ -15,7 +15,7 @@
 当前项目支持CDN加载和npm加载两种方式。
 
 #### CDN加载
-CDN加载需要先加载高德地图JS和threejs的库，代码如下
+CDN加载需要先加载高德地图JS，代码如下
 ```js
 <!--加载高德地图JS 2.0 -->
 <script src = 'https://webapi.amap.com/maps?v=2.0&key=YOUR_KEY'></script>
