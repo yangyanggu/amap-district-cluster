@@ -9,7 +9,7 @@
 [codepen示例](https://codepen.io/yangyanggu/pen/YzjBvQM)
 
 ### 简介
-本项目为高德地图的threejs图层插件，包含ThreeLayer图层、ThreeGltf加载
+本项目为高德地图的区划聚合图层，图层基于AMapUI的区划插件实现，[原插件地址](https://lbs.amap.com/api/amap-ui/reference-amap-ui/geo/district-cluster)
 
 ### 加载方式
 当前项目支持CDN加载和npm加载两种方式。
