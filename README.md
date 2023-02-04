@@ -1,12 +1,12 @@
-# @amap/district-cluster
-[![npm (tag)](https://img.shields.io/npm/v/@amap/three-layer)](https://www.npmjs.org/package/@amap/three-layer)
-[![NPM downloads](http://img.shields.io/npm/dm/@amap/three-layer.svg)](https://npmjs.org/package/@amap/three-layer)
-![JS gzip size](http://img.badgesize.io/https://unpkg.com/@amap/three-layer/dist/index.js?compression=gzip&label=gzip%20size:%20JS)
-[![NPM](https://img.shields.io/npm/l/@amap/three-layer)](https://github.com/AMap-Web/amap-three)
-[![star](https://badgen.net/github/stars/amap-web/amap-three)](https://github.com/AMap-Web/amap-three)
+# @vuemap/district-cluster
+[![npm (tag)](https://img.shields.io/npm/v/@vuemap/district-cluster)](https://www.npmjs.org/package/@vuemap/district-cluster)
+[![NPM downloads](http://img.shields.io/npm/dm/@vuemap/district-cluster.svg)](https://npmjs.org/package/@vuemap/district-cluster)
+![JS gzip size](http://img.badgesize.io/https://unpkg.com/@vuemap/district-cluster/dist/index.js?compression=gzip&label=gzip%20size:%20JS)
+[![NPM](https://img.shields.io/npm/l/@vuemap/district-cluster)](https://github.com/yangyanggu/amap-district-cluster)
+[![star](https://badgen.net/github/stars/yangyanggu/amap-district-cluster)](https://github.com/yangyanggu/amap-district-cluster)
 
 ### 示例
-[codepen示例](https://codepen.io/yangyanggu/pen/jOxyJqp)
+[codepen示例](https://codepen.io/yangyanggu/pen/YzjBvQM)
 
 ### 简介
 本项目为高德地图的threejs图层插件，包含ThreeLayer图层、ThreeGltf加载
@@ -20,13 +20,13 @@ CDN加载需要先加载高德地图JS和threejs的库，代码如下
 <!--加载高德地图JS 2.0 -->
 <script src = 'https://webapi.amap.com/maps?v=2.0&key=YOUR_KEY'></script>
 <!--加载district-cluster插件 -->
-<script src="https://cdn.jsdelivr.net/npm/@amap/district-cluster/dist/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@vuemap/district-cluster/dist/index.js"></script>
 ```
 
 #### npm加载
 npm加载可以直接使用安装库
 ```shell
-npm install '@amap/district-cluster'
+npm install '@vuemap/district-cluster'
 ```
 
 ### 使用示例
@@ -34,7 +34,7 @@ npm install '@amap/district-cluster'
 #### CDN方式
 ```js
 <script src = 'https://webapi.amap.com/maps?v=2.0&key=YOUR_KEY'></script>
-<script src="https://cdn.jsdelivr.net/npm/@amap/district-cluster/dist/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@vuemap/district-cluster/dist/index.js"></script>
 <script type="text/javascript">
     const map = new AMap.Map('app', {
       center: [120,31],
