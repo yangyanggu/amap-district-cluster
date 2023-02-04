@@ -1,7 +1,6 @@
 import Event from '../event'
 import Const from './Const'
 import distDataParser from './distDataParser'
-import utils from './utils'
 import AreaNode from './AreaNode'
 
 export default class DistrictExplorer extends Event {
@@ -13,7 +12,7 @@ export default class DistrictExplorer extends Event {
     super()
     this._opts = Object.assign(
       {
-        distDataLoc: '//webapi.amap.com/ui/1.1/ui/geo/DistrictExplorer/assets/d_v2',
+        distDataLoc: '//webapi.amap.com/ui/1.1/ui/geo/DistrictExplorer/assets/d_v2'
       },
       opts
     )

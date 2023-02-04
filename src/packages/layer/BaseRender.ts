@@ -1,8 +1,6 @@
 import Event from '../event'
-import DistMgr from './DistMgr'
 import utils from './utils'
 import BoundsItem from './BoundsItem'
-import DistrictExplorer from './DistrictExplorer'
 import type { DistrictCluster } from './index'
 declare global {
   interface Window {
@@ -52,7 +50,6 @@ export class BaseRender extends Event {
   _loadLeft = 0
   _isRendering?: boolean
   _opts: _OptOptions
-  _distExplorer: DistrictExplorer
   _renderLaterId: any
   _map: AMap.Map
   _polygonCache: AMap.Polygon[] = []
@@ -111,9 +108,6 @@ export class BaseRender extends Event {
     this._isRendering = !1
     this._loadLeft = 0
     this._currentFeatures = []
-    this._distExplorer = new DistrictExplorer({
-      map: this._ins.getMap()
-    })
   }
 
   _createLayer() {
@@ -154,7 +148,7 @@ export class BaseRender extends Event {
       const map = this._ins.getMap()
       if (map) {
         if (!center) {
-          const treeNode = DistMgr.getNodeByAdcode(adcode)
+          const treeNode = this._ins._distMgr.getNodeByAdcode(adcode)
           center = treeNode.center
         }
         map.setZoomAndCenter(minZoomToShowSub, center)
@@ -165,7 +159,7 @@ export class BaseRender extends Event {
     return Math.min(2, Math.round(window.devicePixelRatio || 1))
   }
   refreshViewState() {
-    if (!DistMgr.isReady()) return !1
+    if (!this._ins._distMgr.isReady()) return !1
     const simpIns = this._ins
     if (!simpIns.isReady()) return !1
     const map = simpIns.getMap() as AMap.Map,
@@ -224,7 +218,7 @@ export class BaseRender extends Event {
     )
   }
   getMinZoomToShowSub(adcode) {
-    const treeNode = DistMgr.getNodeByAdcode(adcode)
+    const treeNode = this._ins._distMgr.getNodeByAdcode(adcode)
     if (!treeNode || !treeNode.idealZoom) return -1
     if (!treeNode._minZoomToShowSub) {
       const zooms = this._ins.getZooms() as [number, number]
@@ -239,7 +233,7 @@ export class BaseRender extends Event {
   shouldShowSubOnZoom(treeNode, zoom) {
     if (!treeNode.idealZoom) return !1
     if (treeNode._minZoomToShowSub && zoom >= treeNode._minZoomToShowSub) return !0
-    let boundsSize = DistMgr.getNodeBoundsSize(treeNode, zoom)
+    let boundsSize = this._ins._distMgr.getNodeBoundsSize(treeNode, zoom)
     if (1e5 === treeNode.adcode && boundsSize[1] > 400) return !0
     if (boundsSize[1] < this._opts.minHeightToShowSubFeatures) return !1
     let i, len, heightSum
@@ -249,15 +243,15 @@ export class BaseRender extends Event {
       len = children.length
       if (len) {
         for (i = 0; i < len; i++) {
-          boundsSize = DistMgr.getNodeBoundsSize(children[i], zoom)
+          boundsSize = this._ins._distMgr.getNodeBoundsSize(children[i], zoom)
           heightSum += boundsSize[1]
         }
         if (heightSum / len < this._opts.minSubAvgHeightToShowSubFeatures) return !1
       }
     }
-    const parentAdcode = DistMgr.getParentAdcode(treeNode.adcode, treeNode.acroutes)
+    const parentAdcode = this._ins._distMgr.getParentAdcode(treeNode.adcode, treeNode.acroutes)
     if (parentAdcode) {
-      const parentNode = DistMgr.getNodeByAdcode(parentAdcode),
+      const parentNode = this._ins._distMgr.getNodeByAdcode(parentAdcode),
         siblings = parentNode.children
       siblings || console.error('No children bound', treeNode, parentNode)
       len = siblings.length
@@ -265,7 +259,7 @@ export class BaseRender extends Event {
         heightSum = 0
         for (i = 0; i < len; i++)
           if (siblings[i].adcode !== treeNode.adcode) {
-            boundsSize = DistMgr.getNodeBoundsSize(siblings[i], zoom)
+            boundsSize = this._ins._distMgr.getNodeBoundsSize(siblings[i], zoom)
             heightSum += boundsSize[1]
           }
         if (heightSum / (len - 1) < this._opts.minSiblingAvgHeightToShowSubFeatures) return !1
@@ -280,7 +274,7 @@ export class BaseRender extends Event {
     const justSelfList: any[] = [],
       showSubList: any[] = []
     for (let i = 0, len = adcodes.length; i < len; i++) {
-      const treeNode = DistMgr.getNodeByAdcode(adcodes[i])
+      const treeNode = this._ins._distMgr.getNodeByAdcode(adcodes[i])
       if (!treeNode) throw new Error(`Can not find node: ${adcodes[i]}`)
       this._shouldShowSub(treeNode) ? showSubList.push(adcodes[i]) : justSelfList.push(adcodes[i])
     }
@@ -292,10 +286,10 @@ export class BaseRender extends Event {
     let toLoadAdcode
     const currZoom = this._currentZoom as number
     for (let i = 0, len = adcodes.length; i < len; i++) {
-      const treeNode = DistMgr.getNodeByAdcode(adcodes[i])
+      const treeNode = this._ins._distMgr.getNodeByAdcode(adcodes[i])
       toLoadAdcode = null
       if (treeNode.acroutes) {
-        const parentNode = DistMgr.getNodeByAdcode(treeNode.acroutes[treeNode.acroutes.length - 1])
+        const parentNode = this._ins._distMgr.getNodeByAdcode(treeNode.acroutes[treeNode.acroutes.length - 1])
         ;(!treeNode.idealZoom ||
           currZoom < treeNode.idealZoom - 1 ||
           Math.abs(currZoom - parentNode.idealZoom) <= Math.abs(treeNode.idealZoom - currZoom)) &&
@@ -316,7 +310,7 @@ export class BaseRender extends Event {
       feature = areaNode.getParentFeature()
     } else {
       const subFeatures = areaNode.getSubFeatures(),
-        subIdx = DistMgr.getSubIdx(adcode)
+        subIdx = this._ins._distMgr.getSubIdx(adcode)
       feature = subFeatures[subIdx]
       if (!feature) {
         console.warn('Werid, can not find sub feature', areaNode.getAdcode(), adcode)
@@ -440,7 +434,7 @@ export class BaseRender extends Event {
   }
   _loadAndRenderSelf(renderId, loadAdcode, adcode) {
     this._ins.getDistMgr().touchAdcode(loadAdcode, renderId)
-    const distExplorer = DistMgr.getExplorer(),
+    const distExplorer = this._ins._distMgr.getExplorer(),
       areaNode = distExplorer.getLocalAreaNode(loadAdcode)
     if (areaNode) this._renderSelf(renderId, adcode, areaNode)
     else {
@@ -459,7 +453,7 @@ export class BaseRender extends Event {
   }
   _loadAndRenderSub(renderId, adcode) {
     this._ins.getDistMgr().touchAdcode(adcode, renderId)
-    const distExplorer = DistMgr.getExplorer(),
+    const distExplorer = this._ins._distMgr.getExplorer(),
       areaNode = distExplorer.getLocalAreaNode(adcode)
     if (areaNode) {
       this._renderSub(renderId, areaNode)
@@ -535,7 +529,7 @@ export class BaseRender extends Event {
       for (let acroutes = props.acroutes, i = 0, len = acroutes.length; i < len; i++) {
         classNameList.push(`descendant_of_${acroutes[i]}`)
         i === len - 1 && classNameList.push(`child_of_${acroutes[i]}`)
-        i > 0 && routeNames.push(DistMgr.getNodeByAdcode(acroutes[i]).name)
+        i > 0 && routeNames.push(this._ins._distMgr.getNodeByAdcode(acroutes[i]).name)
       }
     container.className = classNameList.join(' ')
     if (routeNames.length > 0) {
@@ -582,7 +576,7 @@ export class BaseRender extends Event {
       this._renderLaterId = null
     }
     this._isRendering = true
-    DistMgr.onReady(this.renderViewport, this, !0)
+    this._ins._distMgr.onReady(this.renderViewport, this, !0)
   }
   getOption(k) {
     return this._opts[k]
@@ -618,7 +612,5 @@ export class BaseRender extends Event {
     this.layer = null
     this._map = null as any
     this._ins = null as any
-    this._distExplorer.destroy()
-    this._distExplorer = null as any
   }
 }

@@ -7,9 +7,26 @@
     <script src = 'https://webapi.amap.com/maps?v=2.0&key=747f980f217a31ba68d99301045a3fa7'></script>
     <script src="https://webapi.amap.com/loca?v=2.0.0&key=747f980f217a31ba68d99301045a3fa7"></script>
     <script src="/index.js" ></script>
+    <style type="text/css">
+      #app{
+        height: 600px;
+      }
+      .control-container{
+        padding: 10px;
+      }
+      .control-container button{
+        margin-right: 5px;
+      }
+    </style>
   </head>
   <body>
-    <div id="app" style="height: 600px;"></div>
+    <div id="app"></div>
+    <div class="control-container">
+      <button onclick="show()">显示</button>
+      <button onclick="hide()">隐藏</button>
+      <button onclick="createLayer()">创建图层</button>
+      <button onclick="destroyLayer()">销毁图层</button>
+    </div>
     <script type="text/javascript">
       const map = new AMap.Map('app', {
         zoom: 7,
@@ -17,39 +34,53 @@
         pitch: 35
       })
       window.map = map
-      const layer = new AMap.DistrictCluster({
-        map,
-        getPosition: function(item) {
-          if (!item) {
-            return null;
-          }
-          const parts = item.split(',');
-          //返回经纬度
-          return [parseFloat(parts[0]), parseFloat(parts[1])];
-        },
-        renderOptions: {
-          zooms: [2,16],
-          renderClusterMarker(feature, dataItems){
-            return new AMap.Marker({
-              position: feature.properties.center,
-              anchor: 'center',
-              content: `<div style="word-break: keep-all;color: #fff;">${feature.properties.name} - ${dataItems.length}</div>`
-            })
+      let layer
+      function createLayer(){
+        layer = new AMap.DistrictCluster({
+          map,
+          getPosition: function(item) {
+            if (!item) {
+              return null;
+            }
+            const parts = item.split(',');
+            //返回经纬度
+            return [parseFloat(parts[0]), parseFloat(parts[1])];
           },
-          renderPolygon(feature, dataItems){
-            return new AMap.Polygon({
-              path: feature.geometry.coordinates,
-              strokeColor: 'red',
-            })
+          renderOptions: {
+            zooms: [2,16],
+            renderClusterMarker(feature, dataItems){
+              return new AMap.Marker({
+                position: feature.properties.center,
+                anchor: 'center',
+                content: `<div style="word-break: keep-all;color: #fff;">${feature.properties.name} - ${dataItems.length}</div>`
+              })
+            },
+            renderPolygon(feature, dataItems){
+              return new AMap.Polygon({
+                path: feature.geometry.coordinates,
+                strokeColor: 'red',
+              })
+            }
           }
-        }
-      })
-      fetch('https://a.amap.com/amap-ui/static/data/10w.txt').then(res => {
-        return res.text()
-      }).then(csv => {
-        const data = csv.split('\n');
-        layer.setData(data);
-      })
+        })
+        fetch('https://a.amap.com/amap-ui/static/data/10w.txt').then(res => {
+          return res.text()
+        }).then(csv => {
+          const data = csv.split('\n');
+          layer.setData(data);
+        })
+      }
+      createLayer()
+      function destroyLayer(){
+        layer.destroy()
+        layer = null
+      }
+      function hide(){
+        layer.hide()
+      }
+      function show(){
+        layer.show()
+      }
       // console.log('const map: ', map.coordsToLngLat([189025056, 86740399]))
 
     </script>

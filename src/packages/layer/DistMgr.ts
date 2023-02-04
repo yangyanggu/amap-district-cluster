@@ -5,51 +5,14 @@ import DistrictExplorer from './DistrictExplorer'
 import BoundsItem from './BoundsItem'
 import SphericalMercator from './SphericalMercator'
 
-const singleDistExplorer = new DistrictExplorer({})
-let isDistReady = false,
-  singleCountryNode: any = null
-const nodeMap = {},
-  waitFnList: any[] = []
-;(function () {
-  function pixelToLngLat(x, y, pz) {
-    return SphericalMercator.pointToLngLat([x, y], pz)
-  }
-  function getBounds(node) {
-    const nodeBounds = node.bbounds
-    return new AMap.Bounds(
-      pixelToLngLat(nodeBounds.x, nodeBounds.y + nodeBounds.height, 20),
-      pixelToLngLat(nodeBounds.x + nodeBounds.width, nodeBounds.y, 20)
-    )
-  }
-  function filteAreaTree(root) {
-    const stack = [root]
-    do {
-      const node = stack.pop()
-      nodeMap[node.adcode] = node
-      const bbox = node.bbox
-      node.bbounds = new BoundsItem(bbox[0], bbox[1], bbox[2], bbox[3])
-      node.bbox = getBounds(node)
-      if (node.children)
-        for (let children = node.children, i = 0, len = children.length; i < len; i++) {
-          children[i].childIdx = i
-          stack.push(children[i])
-        }
-    } while (stack.length)
-  }
-  singleDistExplorer.loadAreaTree(function (error, areaTree) {
-    if (error) throw error
-    filteAreaTree(areaTree)
-    singleCountryNode = areaTree
-    isDistReady = !0
-    if (waitFnList.length) {
-      for (let i = 0, len = waitFnList.length; i < len; i++) waitFnList[i][0].call(waitFnList[i][1])
-      waitFnList.length = 0
-    }
-  })
-})()
 export default class DistMgr {
   _opts: any
   _touchMap: any
+  singleCountryNode: any
+  isDistReady = false
+  nodeMap = {}
+  waitFnList: any[] = []
+  singleDistExplorer = new DistrictExplorer({})
   constructor(opts) {
     this._opts = utils.extend(
       {
@@ -58,15 +21,53 @@ export default class DistMgr {
       opts
     )
     this._touchMap = {}
-    singleDistExplorer.loadMultiAreaNodes(this._opts.topAdcodes)
+
+    this.singleDistExplorer.loadAreaTree((error, areaTree) => {
+      if (error) throw error
+      this.filterAreaTree(areaTree)
+      this.singleCountryNode = areaTree
+      this.isDistReady = true
+      if (this.waitFnList.length) {
+        for (let i = 0, len = this.waitFnList.length; i < len; i++) {
+          this.waitFnList[i][0].call(this.waitFnList[i][1])
+        }
+        this.waitFnList.length = 0
+      }
+      this.singleDistExplorer.loadMultiAreaNodes(this._opts.topAdcodes)
+    })
+  }
+  pixelToLngLat(x, y, pz) {
+    return SphericalMercator.pointToLngLat([x, y], pz)
+  }
+  getBounds(node) {
+    const nodeBounds = node.bbounds
+    return new AMap.Bounds(
+      this.pixelToLngLat(nodeBounds.x, nodeBounds.y + nodeBounds.height, 20),
+      this.pixelToLngLat(nodeBounds.x + nodeBounds.width, nodeBounds.y, 20)
+    )
+  }
+  filterAreaTree(root) {
+    const stack = [root]
+    do {
+      const node = stack.pop()
+      this.nodeMap[node.adcode] = node
+      const bbox = node.bbox
+      node.bbounds = new BoundsItem(bbox[0], bbox[1], bbox[2], bbox[3])
+      node.bbox = this.getBounds(node)
+      if (node.children)
+        for (let children = node.children, i = 0, len = children.length; i < len; i++) {
+          children[i].childIdx = i
+          stack.push(children[i])
+        }
+    } while (stack.length)
   }
 
-  static isReady() {
-    return isDistReady
+  isReady() {
+    return this.isDistReady
   }
-  static getParentAdcode(adcode, acroutes) {
+  getParentAdcode(adcode, acroutes) {
     if (!acroutes) {
-      const node = DistMgr.getNodeByAdcode(adcode)
+      const node = this.getNodeByAdcode(adcode)
       if (!node) {
         console.warn(`Can not find node: ${adcode}`)
         return null
@@ -75,33 +76,33 @@ export default class DistMgr {
     }
     return acroutes && acroutes.length ? acroutes[acroutes.length - 1] : null
   }
-  static getSubIdx(subAdcode) {
-    return DistMgr.getNodeByAdcode(subAdcode).childIdx
+  getSubIdx(subAdcode) {
+    return this.getNodeByAdcode(subAdcode).childIdx
   }
-  static getChildrenNum(adcode) {
-    const node = DistMgr.getNodeByAdcode(adcode)
-    return DistMgr.getChildrenNumOfNode(node)
+  getChildrenNum(adcode) {
+    const node = this.getNodeByAdcode(adcode)
+    return this.getChildrenNumOfNode(node)
   }
-  static getChildrenNumOfNode(node) {
+  getChildrenNumOfNode(node) {
     return node.children ? node.children.length : node.childrenNum || 0
   }
-  static getNodeByAdcode(adcode) {
-    const node = nodeMap[adcode]
+  getNodeByAdcode(adcode) {
+    const node = this.nodeMap[adcode]
     if (!node) {
-      let areaNode = singleDistExplorer.getLocalAreaNode(`${`${adcode}`.substr(0, 4)}00`)
-      areaNode || (areaNode = singleDistExplorer.getLocalAreaNode(`${`${adcode}`.substr(0, 2)}0000`))
+      let areaNode = this.singleDistExplorer.getLocalAreaNode(`${`${adcode}`.substr(0, 4)}00`)
+      areaNode || (areaNode = this.singleDistExplorer.getLocalAreaNode(`${`${adcode}`.substr(0, 2)}0000`))
       if (!areaNode) return null
       for (let subFeatures = areaNode.getSubFeatures(), i = 0, len = subFeatures.length; i < len; i++)
         if (subFeatures[i].properties.adcode === adcode) return subFeatures[i].properties
     }
     return node
   }
-  static getNodeChildren(adcode) {
-    const node = DistMgr.getNodeByAdcode(adcode)
+  getNodeChildren(adcode) {
+    const node = this.getNodeByAdcode(adcode)
     if (!node) return null
     if (node.children) return node.children
     if (node.childrenNum >= 0) {
-      const areaNode = singleDistExplorer.getLocalAreaNode(adcode)
+      const areaNode = this.singleDistExplorer.getLocalAreaNode(adcode)
       if (!areaNode) return null
       const children: any[] = [],
         subFeatures = areaNode.getSubFeaturesInPixel()
@@ -110,19 +111,19 @@ export default class DistMgr {
     }
     return null
   }
-  static getExplorer() {
-    return singleDistExplorer
+  getExplorer() {
+    return this.singleDistExplorer
   }
-  static traverseCountry(bounds, zoom, handler, finish, thisArg) {
-    DistMgr.traverseNode(singleCountryNode, bounds, zoom, handler, finish, thisArg)
+  traverseCountry(bounds, zoom, handler, finish, thisArg) {
+    this.traverseNode(this.singleCountryNode, bounds, zoom, handler, finish, thisArg)
   }
-  static getNodeBoundsSize(node, zoom) {
-    const pz = DistMgr.getPixelZoom(),
+  getNodeBoundsSize(node, zoom) {
+    const pz = this.getPixelZoom(),
       scale = Math.pow(2, pz - zoom)
     return [node.bbounds.width / scale, node.bbounds.height / scale]
   }
 
-  static doesRingRingIntersect(mapBounds: AMap.Bounds, bounds: AMap.Bounds) {
+  doesRingRingIntersect(mapBounds: AMap.Bounds, bounds: AMap.Bounds) {
     const mapArray = [
       mapBounds.getNorthWest().toArray(),
       mapBounds.getNorthEast().toArray(),
@@ -139,34 +140,34 @@ export default class DistMgr {
     ]
     return !!intersect(polygon([mapArray]), polygon([boxArray]))
   }
-  static traverseNode(topNode, bounds: AMap.Bounds, zoom, handler, finish, thisArg, excludedAdcodes?: any) {
+  traverseNode(topNode, bounds: AMap.Bounds, zoom, handler, finish, thisArg, excludedAdcodes?: any) {
     if (!(excludedAdcodes && excludedAdcodes.indexOf(topNode.adcode) >= 0)) {
       if (this.doesRingRingIntersect(bounds, topNode.bbox as AMap.Bounds)) {
         const children = topNode.children,
           hasChildren = children && children.length > 0
         if (zoom > topNode.idealZoom && hasChildren) {
           for (let i = 0, len = children.length; i < len; i++) {
-            DistMgr.traverseNode(children[i], bounds, zoom, handler, null, thisArg, excludedAdcodes)
+            this.traverseNode(children[i], bounds, zoom, handler, null, thisArg, excludedAdcodes)
           }
         } else handler.call(thisArg, topNode)
       }
       finish && finish.call(thisArg)
     }
   }
-  static onReady(fn, thisArg, canSync?: any) {
-    isDistReady
+  onReady(fn, thisArg, canSync?: any) {
+    this.isDistReady
       ? canSync
         ? fn.call(thisArg)
         : setTimeout(function () {
             fn.call(thisArg)
           }, 0)
-      : waitFnList.push([fn, thisArg])
+      : this.waitFnList.push([fn, thisArg])
   }
-  static getPixelZoom() {
-    return singleCountryNode?.pz
+  getPixelZoom() {
+    return this.singleCountryNode?.pz
   }
-  static loadAreaNode(adcode, callback, thisArg, callSync) {
-    singleDistExplorer.loadAreaNode(adcode, callback, thisArg, callSync)
+  loadAreaNode(adcode, callback, thisArg, callSync) {
+    this.singleDistExplorer.loadAreaNode(adcode, callback, thisArg, callSync)
   }
 
   isExcludedAdcode(adcode) {
@@ -177,14 +178,14 @@ export default class DistMgr {
     const topAdcodes = this._opts.topAdcodes,
       excludedAdcodes = this._opts.excludedAdcodes
     for (let i = 0, len = topAdcodes.length; i < len; i++) {
-      const node = DistMgr.getNodeByAdcode(topAdcodes[i])
+      const node = this.getNodeByAdcode(topAdcodes[i])
       if (!node) throw new Error(`Can not find adcode: ${topAdcodes[i]}`)
-      DistMgr.traverseNode(node, bounds, zoom, handler, finish, thisArg, excludedAdcodes)
+      this.traverseNode(node, bounds, zoom, handler, finish, thisArg, excludedAdcodes)
     }
   }
   tryClearCache(tag, maxLeft) {
     if (!(maxLeft < 0)) {
-      const stack = [singleCountryNode],
+      const stack = [this.singleCountryNode],
         list: any[] = [],
         touchMap = this._touchMap
       do {
@@ -200,10 +201,19 @@ export default class DistMgr {
       const toDelLen = list.length - maxLeft
       if (!(toDelLen <= 0))
         for (let i = 0; i < toDelLen; i++)
-          singleDistExplorer.clearAreaNodeCacheByAdcode(list[i]) && this.touchAdcode(list[i], null)
+          this.singleDistExplorer.clearAreaNodeCacheByAdcode(list[i]) && this.touchAdcode(list[i], null)
     }
   }
   touchAdcode(adcode, tag) {
     this._touchMap[adcode] = tag
+  }
+  destroy() {
+    this.singleDistExplorer.destroy()
+    this._touchMap = {}
+    this.nodeMap = {}
+    this.singleDistExplorer = undefined as any
+    this._opts = undefined
+    this.waitFnList = []
+    this.singleCountryNode = undefined
   }
 }

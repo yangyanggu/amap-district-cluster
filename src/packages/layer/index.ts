@@ -33,6 +33,10 @@ class DistrictCluster extends Event {
     source: null
   } as any
 
+  _mouseEvent = utils.bind(() => {
+    this.renderLater()
+  }, this)
+
   constructor(options: DistrictClusterOptions) {
     super()
     const defaultOptions = {
@@ -51,6 +55,7 @@ class DistrictCluster extends Event {
       excludedAdcodes: this._opts.excludedAdcodes
     })
     this._distCounter = new DistCounter({
+      distMgr: this._distMgr,
       pointPackerThisArg: this,
       pointPacker: (p) => {
         return this._packDataItem(p)
@@ -63,31 +68,25 @@ class DistrictCluster extends Event {
       map: options.map
     })
     this._opts.data && this.setData(this._opts.data)
-    this.map.on('moveend', () => {
-      this.renderLater()
-    })
-    this.map.on('zoomend', () => {
-      this.renderLater()
-    })
-    this.map.on('resize', () => {
-      this.renderLater()
-    })
-    this.map.on('rotateend', () => {
-      this.renderLater()
-    })
-    this.map.on('dragend', () => {
-      this.renderLater()
-    })
+    this.bindOrUnbindMapEvent()
+  }
+  bindOrUnbindMapEvent(bind = true) {
+    const method = bind ? 'on' : 'off'
+    this.map[method]('moveend', this._mouseEvent)
+    this.map[method]('zoomend', this._mouseEvent)
+    this.map[method]('resize', this._mouseEvent)
+    this.map[method]('rotateend', this._mouseEvent)
+    this.map[method]('dragend', this._mouseEvent)
   }
 
   getMinZoomToShowSub(adcode) {
     return this.renderEngine.getMinZoomToShowSub(adcode)
   }
   getAreaNodeProps(adcode) {
-    return DistMgr.getNodeByAdcode(adcode)
+    return this._distMgr.getNodeByAdcode(adcode)
   }
   getDistrictExplorer() {
-    return DistMgr.getExplorer()
+    return this._distMgr.getExplorer()
   }
   getRender() {
     return this.renderEngine
@@ -173,7 +172,7 @@ class DistrictCluster extends Event {
     data.length && this._opts.autoSetFitView && this.setFitView()
   }
   isReady() {
-    return DistMgr.isReady() && !!this._data
+    return this._distMgr.isReady() && !!this._data
   }
   setFitView() {
     const nodeBounds = this._data.bounds,
@@ -206,9 +205,15 @@ class DistrictCluster extends Event {
   }
 
   destroy() {
+    this.bindOrUnbindMapEvent(false)
     this.getRender().destroy()
+    this._distCounter.destroy()
+    this._distMgr.destroy()
     this.renderEngine = null as any
-    this._data = null
+    this._data = {
+      list: [],
+      bounds: null
+    }
     this._distMgr = null as any
     this.map = undefined as any
     this._opts = undefined as any

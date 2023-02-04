@@ -46,7 +46,7 @@ export default class DistCounter {
     return items
   }
   calcDistGroup(adcode, subInclude, callback, thisArg) {
-    const nodeInfo = DistMgr.getNodeByAdcode(adcode)
+    const nodeInfo = this._opts.distMgr.getNodeByAdcode(adcode)
     let routes = nodeInfo.acroutes || [1e5]
     if (subInclude && nodeInfo.acroutes) {
       routes = [].concat(routes)
@@ -65,7 +65,7 @@ export default class DistCounter {
     else {
       const points = this.getPointsByAdcode(adcode)
       if (!points) throw new Error(`Not points found:  ${adcode}`)
-      DistMgr.getExplorer().loadAreaNode(
+      this._opts.distMgr.getExplorer().loadAreaNode(
         adcode,
         (error, areaNode) => {
           this._groupByAreaNode(areaNode, points)
@@ -89,5 +89,9 @@ export default class DistCounter {
     }
     isTopNode && this._updatePointsMap(areaNode.getAdcode(), 'all', topPoints)
     this._updatePointsMap(areaNode.getAdcode(), '__done', !0)
+  }
+  destroy() {
+    this.clearData()
+    this._opts = null
   }
 }
