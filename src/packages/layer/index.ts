@@ -7,6 +7,8 @@ import BoundsItem from './BoundsItem'
 import utils from './utils'
 import type { RenderOptions } from './BaseRender'
 
+export type { RenderOptions }
+
 export interface DistrictClusterOptions {
   map: AMap.Map // 地图实例
   zIndex?: number // 默认10

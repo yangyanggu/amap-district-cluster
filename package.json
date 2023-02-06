@@ -1,6 +1,6 @@
 {
   "name": "@vuemap/district-cluster",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "高德地图amap的区划聚合图层插件",
   "keywords": [
     "amap",
