@@ -2,19 +2,19 @@ import Event from '../event'
 import utils from './utils'
 import BoundsItem from './BoundsItem'
 import type { DistrictCluster } from './index'
-declare global {
+/*declare global {
   interface Window {
     Loca: any
   }
-}
-interface StyleOption {
+}*/
+export interface StyleOption {
   strokeColor?: string
   strokeOpacity?: number
   strokeWeight?: number
   fillColor?: string
   fillOpacity?: number
 }
-interface FeatureStyleByLevelOption {
+export interface FeatureStyleByLevelOption {
   country?: StyleOption // 国家
   province?: StyleOption // 省份
   city?: StyleOption // 市
