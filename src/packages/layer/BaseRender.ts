@@ -21,7 +21,6 @@ export interface FeatureStyleByLevelOption {
   district?: StyleOption // 区县
 }
 export interface RenderOptions {
-  map: AMap.Map
   // engine?: 'default' | 'loca'
   minHeightToShowSubFeatures?: number
   minSiblingAvgHeightToShowSubFeatures?: number
@@ -39,7 +38,10 @@ export interface RenderOptions {
   featureEventSupport?: boolean // 区划面是否开启事件支持，默认true
   featureClickToShowSub?: boolean // 点击区划面是否触发进入子级区划，默认false
 }
-type _OptOptions = Required<RenderOptions>
+interface CustomRenderOptions extends RenderOptions {
+  map: AMap.Map
+}
+type _OptOptions = Required<CustomRenderOptions>
 export class BaseRender extends Event {
   baseId = 1
   _ins: DistrictCluster
