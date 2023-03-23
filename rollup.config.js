@@ -8,13 +8,12 @@ import serve from 'rollup-plugin-serve'
 import livereload from 'rollup-plugin-livereload'
 
 import esbuild from 'rollup-plugin-esbuild'
-import typescript from '@rollup/plugin-typescript';
+import typescript from '@rollup/plugin-typescript'
 
-import RemoveGlobalNamePlugin from "./build/RemoveGlobalNamePlugin";
+import RemoveGlobalNamePlugin from './build/RemoveGlobalNamePlugin'
 
-
-function isProd(){
-  return process.env.NODE_ENV === 'production';
+function isProd() {
+  return process.env.NODE_ENV === 'production'
 }
 
 export default {
@@ -26,13 +25,12 @@ export default {
       sourcemap: true,
       name: 'AMap',
       plugins: [RemoveGlobalNamePlugin()],
-      globals: {
-      }
+      globals: {}
       //当入口文件有export时，'umd'格式必须指定name
       //这样，在通过<script>标签引入时，才能通过name访问到export的内容。
     },
     {
-      file: './dist/index-es.js',
+      file: './dist/index.mjs',
       format: 'es',
       sourcemap: true
     },
@@ -53,7 +51,7 @@ export default {
       tsconfig: 'tsconfig.json'
     }),
     nodeResolve({
-      extensions: ['.mjs', '.js', '.json', '.ts'],
+      extensions: ['.mjs', '.js', '.json', '.ts']
     }),
     commonjs(),
     esbuild({
@@ -70,20 +68,22 @@ export default {
       loaders: {
         // Add .json files support
         // require @rollup/plugin-commonjs
-        '.json': 'json',
-      },
+        '.json': 'json'
+      }
     }),
     // 热更新
-    !isProd() && livereload({
-      watch: ['dist', 'test'],
-      verbose: false
-    }),
+    !isProd() &&
+      livereload({
+        watch: ['dist', 'test'],
+        verbose: false
+      }),
     // 开发模式开启静态服务器
-    !isProd() && serve({
-      open: true,
-      port: 8080,
-      contentBase: ['dist', 'test', './'],
-      openPage: '/index.html'
-    })
+    !isProd() &&
+      serve({
+        open: true,
+        port: 8080,
+        contentBase: ['dist', 'test', './'],
+        openPage: '/index.html'
+      })
   ]
 }
