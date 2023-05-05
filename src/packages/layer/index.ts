@@ -44,6 +44,7 @@ class DistrictCluster extends Event {
 
   constructor(options: DistrictClusterOptions) {
     super()
+    this.initCSS()
     const defaultOptions = {
       autoSetFitView: true,
       topAdcodes: [100000],
@@ -84,6 +85,24 @@ class DistrictCluster extends Event {
     this.map[method]('resize', this._mouseEvent)
     this.map[method]('rotateend', this._mouseEvent)
     this.map[method]('dragend', this._mouseEvent)
+  }
+
+  initCSS() {
+    const id = '_amap_district_cluster_css'
+    const style = document.getElementById(id)
+    if (style) {
+      return
+    }
+    const css =
+      ".amap-ui-district-cluster-container{cursor:default;-webkit-backface-visibility:hidden;-webkit-transform:translateZ(0) scale(1,1)}.amap-ui-district-cluster-container canvas{position:absolute}.amap-ui-district-cluster-container .amap-ui-hide{display:none!important}.amap-ui-district-cluster-container .overlay-title,.amap-ui-district-cluster-marker{color:#555;background-color:#fffeef;font-size:12px;white-space:nowrap;position:absolute}.amap-ui-district-cluster-container .overlay-title{padding:2px 6px;display:inline-block;z-index:99999;border:1px solid #7e7e7e;border-radius:2px}.amap-ui-district-cluster-container .overlay-title:after,.amap-ui-district-cluster-container .overlay-title:before{content:'';display:block;position:absolute;margin:auto;width:0;height:0;border:solid transparent;border-width:5px}.amap-ui-district-cluster-container .overlay-title.left{transform:translate(10px,-50%)}.amap-ui-district-cluster-container .overlay-title.left:before{top:5px}.amap-ui-district-cluster-container .overlay-title.left:after{left:-9px;top:5px;border-right-color:#fffeef}.amap-ui-district-cluster-container .overlay-title.left:before{left:-10px;border-right-color:#7e7e7e}.amap-ui-district-cluster-container .overlay-title.top{transform:translate(-50%,-130%)}.amap-ui-district-cluster-container .overlay-title.top:before{left:0;right:0}.amap-ui-district-cluster-container .overlay-title.top:after{bottom:-9px;left:0;right:0;border-top-color:#fffeef}.amap-ui-district-cluster-container .overlay-title.top:before{bottom:-10px;border-top-color:#7e7e7e}.amap-ui-district-cluster-marker{border:1px solid #8e8e8e;width:auto;height:22px;border-radius:5px 5px 5px 0;left:0;top:0}.amap-ui-district-cluster-marker:after,.amap-ui-district-cluster-marker:before{content:'';display:block;position:absolute;width:0;height:0;border:solid rgba(0,0,0,0);border-width:6px;left:13px}.amap-ui-district-cluster-marker:after{bottom:-12px;border-top-color:#fffeef}.amap-ui-district-cluster-marker:before{bottom:-13px;border-top-color:#8e8e8e}.amap-ui-district-cluster-marker span{vertical-align:middle;padding:3px 5px;display:inline-block;height:16px;line-height:16px}.amap-ui-district-cluster-marker-title{border-radius:5px 0 0 0}.amap-ui-district-cluster-marker-body{background-color:#dc3912;color:#fff;border-radius:0 5px 5px 0}.amap-ui-district-cluster-marker.level_country .amap-ui-district-cluster-marker-body{background-color:#36c}.amap-ui-district-cluster-marker.level_province .amap-ui-district-cluster-marker-body{background-color:#dc3912}.amap-ui-district-cluster-marker.level_city .amap-ui-district-cluster-marker-body{background-color:#909}.amap-ui-district-cluster-marker.level_district .amap-ui-district-cluster-marker-body{background-color:#d47}"
+    const d = document,
+      a = 'appendChild',
+      i = 'styleSheet',
+      s = d.createElement('style')
+    s.id = id
+    s.type = 'text/css'
+    d.getElementsByTagName('head')[0][a](s)
+    s[i] ? (s[i].cssText = css) : s[a](d.createTextNode(css))
   }
 
   getMinZoomToShowSub(adcode) {
@@ -237,14 +256,3 @@ class DistrictCluster extends Event {
 }
 
 export { DistrictCluster }
-;(function (c) {
-  const d = document,
-    a = 'appendChild',
-    i = 'styleSheet',
-    s = d.createElement('style')
-  s.type = 'text/css'
-  d.getElementsByTagName('head')[0][a](s)
-  s[i] ? (s[i].cssText = c) : s[a](d.createTextNode(c))
-})(
-  ".amap-ui-district-cluster-container{cursor:default;-webkit-backface-visibility:hidden;-webkit-transform:translateZ(0) scale(1,1)}.amap-ui-district-cluster-container canvas{position:absolute}.amap-ui-district-cluster-container .amap-ui-hide{display:none!important}.amap-ui-district-cluster-container .overlay-title,.amap-ui-district-cluster-marker{color:#555;background-color:#fffeef;font-size:12px;white-space:nowrap;position:absolute}.amap-ui-district-cluster-container .overlay-title{padding:2px 6px;display:inline-block;z-index:99999;border:1px solid #7e7e7e;border-radius:2px}.amap-ui-district-cluster-container .overlay-title:after,.amap-ui-district-cluster-container .overlay-title:before{content:'';display:block;position:absolute;margin:auto;width:0;height:0;border:solid transparent;border-width:5px}.amap-ui-district-cluster-container .overlay-title.left{transform:translate(10px,-50%)}.amap-ui-district-cluster-container .overlay-title.left:before{top:5px}.amap-ui-district-cluster-container .overlay-title.left:after{left:-9px;top:5px;border-right-color:#fffeef}.amap-ui-district-cluster-container .overlay-title.left:before{left:-10px;border-right-color:#7e7e7e}.amap-ui-district-cluster-container .overlay-title.top{transform:translate(-50%,-130%)}.amap-ui-district-cluster-container .overlay-title.top:before{left:0;right:0}.amap-ui-district-cluster-container .overlay-title.top:after{bottom:-9px;left:0;right:0;border-top-color:#fffeef}.amap-ui-district-cluster-container .overlay-title.top:before{bottom:-10px;border-top-color:#7e7e7e}.amap-ui-district-cluster-marker{border:1px solid #8e8e8e;width:auto;height:22px;border-radius:5px 5px 5px 0;left:0;top:0}.amap-ui-district-cluster-marker:after,.amap-ui-district-cluster-marker:before{content:'';display:block;position:absolute;width:0;height:0;border:solid rgba(0,0,0,0);border-width:6px;left:13px}.amap-ui-district-cluster-marker:after{bottom:-12px;border-top-color:#fffeef}.amap-ui-district-cluster-marker:before{bottom:-13px;border-top-color:#8e8e8e}.amap-ui-district-cluster-marker span{vertical-align:middle;padding:3px 5px;display:inline-block;height:16px;line-height:16px}.amap-ui-district-cluster-marker-title{border-radius:5px 0 0 0}.amap-ui-district-cluster-marker-body{background-color:#dc3912;color:#fff;border-radius:0 5px 5px 0}.amap-ui-district-cluster-marker.level_country .amap-ui-district-cluster-marker-body{background-color:#36c}.amap-ui-district-cluster-marker.level_province .amap-ui-district-cluster-marker-body{background-color:#dc3912}.amap-ui-district-cluster-marker.level_city .amap-ui-district-cluster-marker-body{background-color:#909}.amap-ui-district-cluster-marker.level_district .amap-ui-district-cluster-marker-body{background-color:#d47}"
-)
