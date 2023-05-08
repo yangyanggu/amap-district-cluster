@@ -126,6 +126,9 @@ class DistrictCluster extends Event {
   render() {
     this.renderEngine.render()
   }
+  forceRender() {
+    this.renderEngine.forceRender()
+  }
   getDistMgr() {
     return this._distMgr
   }

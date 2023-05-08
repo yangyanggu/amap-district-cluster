@@ -24,6 +24,7 @@
     <div class="control-container">
       <button onclick="show()">显示</button>
       <button onclick="hide()">隐藏</button>
+      <button onclick="forceRender()">强刷图层</button>
       <button onclick="createLayer()">创建图层</button>
       <button onclick="destroyLayer()">销毁图层</button>
     </div>
@@ -35,6 +36,7 @@
       })
       window.map = map
       let layer
+      let flag = 0
       function createLayer(){
         layer = new AMap.DistrictCluster({
           map,
@@ -50,13 +52,13 @@
           },
           renderOptions: {
             zooms: [2,16],
-            // renderClusterMarker(feature, dataItems){
-            //   return new AMap.Marker({
-            //     position: feature.properties.center,
-            //     anchor: 'center',
-            //     content: `<div style="word-break: keep-all;color: #fff;">${feature.properties.name} - ${dataItems.length}</div>`
-            //   })
-            // },
+            renderClusterMarker(feature, dataItems){
+              return new AMap.Marker({
+                position: feature.properties.center,
+                anchor: 'center',
+                content: `<div style="word-break: keep-all;color: #fff;background: aquamarine;padding: 5px;">${feature.properties.name} - ${dataItems.length} - ${flag===0 ? '正式' : '测试'}</div>`
+              })
+            },
             renderPolygon(feature, dataItems){
               return new AMap.Polygon({
                 path: feature.geometry.coordinates,
@@ -94,6 +96,10 @@
       }
       function show(){
         layer.show()
+      }
+      function forceRender(){
+        flag = flag === 1 ? 0 : 1
+        layer.forceRender()
       }
       // console.log('const map: ', map.coordsToLngLat([189025056, 86740399]))
 

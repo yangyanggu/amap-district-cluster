@@ -64,7 +64,7 @@ export class BaseRender extends Event {
   loca: any
   _locaPolygonLayer: any
   markerGroup?: AMap.OverlayGroup
-  constructor(districtCluster: DistrictCluster, options: RenderOptions) {
+  constructor(districtCluster: DistrictCluster, options: CustomRenderOptions) {
     super()
     this._opts = utils.extend(
       {
@@ -623,6 +623,15 @@ export class BaseRender extends Event {
       this._renderLaterId = null
     }
     this._isRendering = true
+    this._ins._distMgr.onReady(this.renderViewport, this, !0)
+  }
+  forceRender() {
+    if (this._renderLaterId) {
+      clearTimeout(this._renderLaterId)
+      this._renderLaterId = null
+    }
+    this._isRendering = true
+    this.clear()
     this._ins._distMgr.onReady(this.renderViewport, this, !0)
   }
   getOption(k) {
