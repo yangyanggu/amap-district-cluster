@@ -246,6 +246,7 @@ options: DistrictCluster初始化参数，参数内容如下：
 | isHidden              | 无                                  | Boolean | 返回是否处于隐藏状态                                                         |
 | zoomToShowSubFeatures | adcode:number,[ center.LngLat ]    | 无       | 缩放地图至某一级别，此时adcode对应的区划刚好展开显示自身的子级；同时移动地图中心到center（默认为区划行政中心）所指位置。 |、
 | destroy               | 无                                  | 无       | 销毁图层                                                               |
+| forceRender           | 无                                  | 无       | 强制刷新图层，非特殊情况请勿使用                                                   |
 
 ###### 事件列表
 
