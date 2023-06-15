@@ -451,7 +451,7 @@ export class BaseRender extends Event {
               adcode: item.feature.properties.adcode,
               ...item
             })
-            if (this._opts.clusterMarkerEventSupport) {
+            if (this._opts.clusterMarkerClickToShowSub) {
               this._ins.zoomToShowSubFeatures(item.feature.properties.adcode)
             }
           }, this)

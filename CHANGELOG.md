@@ -1,3 +1,6 @@
+### 0.0.9
+* 解决 clusterMarkerClickToShowSub 属性失效问题
+
 ### 0.0.8
 * 增加强制刷新图层功能
 
