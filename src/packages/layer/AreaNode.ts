@@ -2,6 +2,7 @@ import Const from './Const'
 import bbIdxBuilder from './bbIdxBuilder'
 import SphericalMercator from './SphericalMercator'
 import geomUtils from './geomUtils'
+import '@amap/amap-jsapi-types'
 export default class AreaNode {
   adcode?: any
   _data?: any
@@ -105,7 +106,7 @@ export default class AreaNode {
   _calcNearestFeatureIndexOfSList(pixel, list) {
     let features: any[] = []
     this._data.geoData.sub && (features = this._data.geoData.sub.features)
-    let closest = {
+    const closest = {
       sq: Number.MAX_VALUE,
       idx: -1
     }
@@ -145,7 +146,7 @@ export default class AreaNode {
   }
   _convertPolygonCoordsToLngLats(poly) {
     const list: any[] = []
-    for (let  i = 0, len = poly.length; i < len; i++) list[i] = this._convertRingCoordsToLngLats(poly[i])
+    for (let i = 0, len = poly.length; i < len; i++) list[i] = this._convertRingCoordsToLngLats(poly[i])
     return list
   }
   _convertMultiPolygonCoordsToLngLats(polys) {

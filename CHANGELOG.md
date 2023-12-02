@@ -1,3 +1,7 @@
+### 0.0.10
+* 解决打包后丢失部分ts问题
+* 升级amap ts依赖
+
 ### 0.0.9
 * 解决 clusterMarkerClickToShowSub 属性失效问题
 

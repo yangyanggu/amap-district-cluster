@@ -5,6 +5,8 @@ import DistrictExplorer from './DistrictExplorer'
 import BoundsItem from './BoundsItem'
 import SphericalMercator from './SphericalMercator'
 
+import '@amap/amap-jsapi-types'
+
 interface DeepCount {
   total: number
   count: number
