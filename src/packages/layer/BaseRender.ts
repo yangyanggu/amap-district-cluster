@@ -1,7 +1,7 @@
+/// <reference types="@vuemap/amap-jsapi-types" />
 import Event from '../event'
 import utils from './utils'
 import BoundsItem from './BoundsItem'
-import '@amap/amap-jsapi-types'
 import type { DistrictCluster } from './index'
 /*declare global {
   interface Window {

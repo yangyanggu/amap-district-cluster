@@ -20,6 +20,6 @@
     "src",
     "types"
   ],
-  "files": ["./node_modules/@amap/amap-jsapi-types/index.d.ts"],
+  "files": ["./node_modules/@vuemap/amap-jsapi-types/index.d.ts"],
   "exclude": ["node_modules", "**/__test?__", "**/dist"]
 }

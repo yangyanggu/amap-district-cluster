@@ -1,3 +1,4 @@
+/// <reference types="@vuemap/amap-jsapi-types" />
 import Event from '../event'
 import DistMgr from './DistMgr'
 import DistCounter from './DistCounter'
@@ -5,7 +6,6 @@ import { BaseRender } from './BaseRender'
 import PointItem from './PointItem'
 import BoundsItem from './BoundsItem'
 import utils from './utils'
-import '@amap/amap-jsapi-types'
 import type { RenderOptions } from './BaseRender'
 
 export type { RenderOptions, StyleOption, FeatureStyleByLevelOption } from './BaseRender'

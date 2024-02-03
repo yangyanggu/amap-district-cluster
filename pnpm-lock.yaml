@@ -5,15 +5,15 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
-  '@amap/amap-jsapi-types':
-    specifier: ^0.0.13
-    version: 0.0.13
   '@turf/helpers':
     specifier: ^6.5.0
     version: 6.5.0
   '@turf/intersect':
     specifier: ^6.5.0
     version: 6.5.0
+  '@vuemap/amap-jsapi-types':
+    specifier: ^0.0.16
+    version: 0.0.16
   topojson-client:
     specifier: 3.1.0
     version: 3.1.0
@@ -111,10 +111,6 @@ devDependencies:
     version: 4.7.4
 
 packages:
-
-  /@amap/amap-jsapi-types@0.0.13:
-    resolution: {integrity: sha512-hwp36URjQT9vDTmoUPYph3SEAiOvoUB+PGK0jZeZamgvaxew7rgc1XZWL/HphyMfRAqKwIYsAvXm9v8DTSjjzA==}
-    dev: false
 
   /@babel/runtime@7.18.9:
     resolution: {integrity: sha512-lkqXDcvlFT5rvEjiu6+QYO+1GXrEHRo2LOtS7E4GtX5ESIZOgepqsZBVIj6Pv+a6zqsya9VCgiK1KAK4BvJDAw==}
@@ -580,6 +576,10 @@ packages:
       '@typescript-eslint/types': 5.35.1
       eslint-visitor-keys: 3.3.0
     dev: true
+
+  /@vuemap/amap-jsapi-types@0.0.16:
+    resolution: {integrity: sha512-1B1H2IS8sT2RDubbpEY+K8j11Gb7PZY5Bo0cszRkF8Nw+9HNqpbUNeqkQ6+rxLkwIedcSkOsFDy/IyzXCUXqVw==}
+    dev: false
 
   /abbrev@1.1.1:
     resolution: {integrity: sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==}

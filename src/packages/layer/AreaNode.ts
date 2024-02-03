@@ -1,8 +1,8 @@
+/// <reference types="@vuemap/amap-jsapi-types" />
 import Const from './Const'
 import bbIdxBuilder from './bbIdxBuilder'
 import SphericalMercator from './SphericalMercator'
 import geomUtils from './geomUtils'
-import '@amap/amap-jsapi-types'
 export default class AreaNode {
   adcode?: any
   _data?: any
