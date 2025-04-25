@@ -198,7 +198,7 @@ class DistrictCluster extends Event {
   setData(data) {
     data || (data = [])
     this._buildData(data)
-    this.renderLater(10)
+    this.forceRender()
     data.length && this._opts.autoSetFitView && this.setFitView()
   }
   isReady() {
